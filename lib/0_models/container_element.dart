@@ -52,7 +52,18 @@ class ContainerElement extends UIElement {
   Widget? getContent() {
     if (children.isEmpty) return null;
     if (children.length == 1) return children[0].widget();
-    return type.getWidget((children.map((e) => e.widget()).toList()));
+    List<Widget> widgetChildren = children.map((e) => e.widget()).toList();
+    if (type is FlexElementType) {
+      AxisSize axisSize = (type as FlexElementType).direction == Axis.horizontal
+          ? width
+          : height;
+      bool hugContent = axisSize.type == SizeType.auto;
+      return (type as FlexElementType).getWidget(
+        widgetChildren,
+        mainAxisSize: hugContent ? MainAxisSize.min : MainAxisSize.max,
+      );
+    }
+    return type.getWidget(widgetChildren);
   }
 }
 
@@ -71,53 +82,40 @@ class SingleChildElementType extends ContainerElementType {
   }
 }
 
-class ColumnElementType extends ContainerElementType {
+class FlexElementType extends ContainerElementType {
   double? spacing;
   MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start;
   CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start;
-  VerticalDirection verticalDirection = VerticalDirection.down;
+  Axis direction = Axis.vertical;
+
+  FlexElementType(
+    this.direction, {
+    this.spacing,
+    this.mainAxisAlignment = MainAxisAlignment.start,
+    this.crossAxisAlignment = CrossAxisAlignment.start,
+  });
 
   @override
-  Widget getWidget(List<Widget> children) {
+  Widget getWidget(List<Widget> children,
+      {MainAxisSize mainAxisSize = MainAxisSize.max}) {
     if (spacing != null && children.length > 1) {
       // Add sized box between each child
       List<Widget> spacedChildren = [];
       for (int i = 0; i < children.length; i++) {
         if (i != 0) {
-          spacedChildren.add(SizedBox(height: spacing));
+          spacedChildren.add(SizedBox(
+            width: direction == Axis.horizontal ? spacing : null,
+            height: direction == Axis.vertical ? spacing : null,
+          ));
         }
         spacedChildren.add(children[i]);
       }
     }
-    return Column(
+    return Flex(
+      mainAxisSize: mainAxisSize,
       mainAxisAlignment: mainAxisAlignment,
       crossAxisAlignment: crossAxisAlignment,
-      children: children,
-    );
-  }
-}
-
-//RowElement
-class RowElementType extends ContainerElementType {
-  double? spacing;
-  MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start;
-  CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start;
-
-  @override
-  Widget getWidget(List<Widget> children) {
-    if (spacing != null && children.length > 1) {
-      // Add sized box between each child
-      List<Widget> spacedChildren = [];
-      for (int i = 0; i < children.length; i++) {
-        if (i != 0) {
-          spacedChildren.add(SizedBox(width: spacing));
-        }
-        spacedChildren.add(children[i]);
-      }
-    }
-    return Row(
-      mainAxisAlignment: mainAxisAlignment,
-      crossAxisAlignment: crossAxisAlignment,
+      direction: direction,
       children: children,
     );
   }

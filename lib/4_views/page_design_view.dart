@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/layout/canvas.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/3_components/element/element_builder_interface.dart';
 import 'package:jouhakka_forge/3_components/layout/floating_bar.dart';
+import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
 class PageDesignView extends StatefulWidget {
   final UIPage page;
@@ -15,8 +17,9 @@ class PageDesignView extends StatefulWidget {
 }
 
 class _PageDesignViewState extends State<PageDesignView> {
-  Resolution _resolution = Resolution.iphone13;
   DesignMode _mode = DesignMode.wireframe;
+  Resolution _resolution = Resolution.iphone13;
+  Size _additionalResolution = const Size(0, 0);
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +34,7 @@ class _PageDesignViewState extends State<PageDesignView> {
 
   Widget _canvas() {
     return InteractiveCanvas(
-      resolution: _resolution,
+      resolution: _resolution + _additionalResolution,
       child: Container(
         color: widget.page.backgroundColor,
         child: switch (_mode) {
@@ -39,13 +42,17 @@ class _PageDesignViewState extends State<PageDesignView> {
               key: ValueKey("${widget.page.body.hashCode}_i"),
               element: widget.page.body,
               root: widget.page,
-              onBodyChanged: (element) {
+              onBodyChanged: (element, _) {
                 debugPrint("Body changed");
                 setState(() {
                   widget.page.body = element;
                 });
               },
-              onHoverChange: (_) {},
+              onResizeRequest: (size, hover) {
+                setState(() {
+                  _additionalResolution = size ?? const Size(0, 0);
+                });
+              },
             ),
           DesignMode.design => widget.page.asWidget(),
           DesignMode.prototype =>
@@ -106,8 +113,27 @@ class _PageDesignViewState extends State<PageDesignView> {
               hoverColor: Colors.grey[200]!,
               selectedColor: Colors.grey[400]!.withOpacity(0.5)),
           borderRadius: 12,
-          iconPadding: 12,
+          iconPadding: 16,
           iconSize: 20,
+          custom: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  (_resolution.width + _additionalResolution.width).toString(),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  (_resolution.height + _additionalResolution.height)
+                      .toString(),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
           options: [
             //Desktop, Tablet, Mobile
             FloatingBarAction(

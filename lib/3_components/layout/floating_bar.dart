@@ -10,6 +10,7 @@ class FloatingBar extends StatefulWidget {
   final double iconPadding;
   final double borderRadius;
   final BoxShadow? shadow;
+  final Widget? custom;
   final List<FloatingBarAction> options;
   final List<FloatingBarAction> actions;
 
@@ -28,6 +29,7 @@ class FloatingBar extends StatefulWidget {
     ),
     this.options = const [],
     this.actions = const [],
+    this.custom,
   });
 
   @override
@@ -61,6 +63,7 @@ class _FloatingBarState extends State<FloatingBar> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (widget.custom != null) widget.custom!,
               for (int i = 0; i < widget.options.length; i++)
                 _button(widget.options[i], i),
               for (FloatingBarAction action in widget.actions)

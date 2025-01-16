@@ -177,6 +177,10 @@ class AxisSize {
     }
     return null;
   }
+
+  bool constraints() {
+    return minPixels != null || maxPixels != null;
+  }
 }
 
 class PaddingSettings {}

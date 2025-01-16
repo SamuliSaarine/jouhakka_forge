@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
@@ -10,15 +12,13 @@ import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/container_element.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
-import 'package:web/web.dart' as web;
 
 class ElementBuilderInterface extends StatefulWidget {
-  final void Function(UIElement element)? onBodyChanged;
+  final void Function(UIElement element, int index)? onBodyChanged;
 
   final UIElement? element;
   final ElementRoot? root;
-  final bool isHovering;
-  final Function(bool hovering) onHoverChange;
+  final Function(Size? size, bool hover) onResizeRequest;
   final int index;
   const ElementBuilderInterface({
     super.key,
@@ -26,8 +26,7 @@ class ElementBuilderInterface extends StatefulWidget {
     this.root,
     this.index = 0,
     this.onBodyChanged,
-    required this.onHoverChange,
-    this.isHovering = false,
+    required this.onResizeRequest,
   }) : assert(element != null || root != null, "Element or root must be given");
 
   @override
@@ -39,6 +38,8 @@ class ElementBuilderInterface extends StatefulWidget {
 //TODO: Adjust element size by dragging
 class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   UIElement get element => widget.element!;
+  Size? requiredByContainerEditor;
+  bool directChildHovering = false;
 
   @override
   void initState() {
@@ -48,41 +49,150 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   @override
   Widget build(BuildContext context) {
     if (widget.element == null) return Center(child: _addChildButton());
-    /*return ValueListener(
-      source: Session.hoveredElement,
-      builder: (hoveredElement) {
-        bool isHovering = hoveredElement == widget.element;
-        widget.onHoverChange(isHovering);*/
-    Widget child = element is ContainerElement
-        ? ContainerEditor(
-            key: ValueKey("${element.hashCode}_c"),
-            isHovering: widget.isHovering,
-            element: element as ContainerElement,
-            showBorder: true, //element.parent != null,)
-          )
-        : _elementInterface(widget.isHovering);
-    return MouseRegion(
-      onEnter: (_) {
-        Session.hoveredElement.value = widget.element;
-        widget.onHoverChange(true);
-      },
-      onExit: (_) {
-        Session.hoveredElement.value = null;
-        widget.onHoverChange(false);
-      },
-      onHover: (_) {
-        Session.hoveredElement.value ??= widget.element;
-        widget.onHoverChange(true);
-      },
-      hitTestBehavior: HitTestBehavior.opaque,
-      child: child,
+
+    bool isHovering =
+        Session.hoveredElement.value == widget.element || directChildHovering;
+
+    Widget? contentOverride;
+    if (element is ContainerElement) {
+      ContainerElement containerElement = element as ContainerElement;
+      Widget expandChild(Widget child) {
+        if (element.expands()) {
+          if (containerElement.type is FlexElementType || isHovering) {
+            return Expanded(
+              child: child,
+            );
+          } else if (containerElement.type is StackElementType) {
+            return Positioned.fill(
+              child: child,
+            );
+          }
+        }
+        return child;
+      }
+
+      contentOverride = ContainerChildEditor.from(
+        containerElement,
+        isHovering: isHovering,
+        onAddChild: (direction) {
+          if (containerElement.type is SingleChildElementType) {
+            containerElement
+                .changeContainerType(FlexElementType(direction.axis));
+          }
+          containerElement.addChild(
+            UIElement.defaultBox(containerElement.root,
+                parent: containerElement),
+          );
+          setState(() {});
+        },
+        onButtonSizeUpdate: (newSize) {
+          requiredByContainerEditor = newSize;
+        },
+        children: [
+          for (int i = 0; i < containerElement.children.length; i++)
+            expandChild(
+              ElementBuilderInterface(
+                key: ValueKey("${containerElement.children[i].hashCode}_i"),
+                element: containerElement.children[i],
+                root: containerElement.root,
+                index: i,
+                onBodyChanged: (element, index) {
+                  containerElement.children[index] = element;
+                  setState(() {});
+                },
+                onResizeRequest: (size, hover) {
+                  assert(size != null || hover,
+                      "Size must be given if hovering is false");
+                  if (requiredByContainerEditor != null && hover) {
+                    if (size != null) {
+                      size = Size(size.width + requiredByContainerEditor!.width,
+                          size.height + requiredByContainerEditor!.height);
+                    } else {
+                      size = requiredByContainerEditor;
+                    }
+                  }
+
+                  directChildHovering = hover;
+
+                  widget.onResizeRequest(size, hover);
+                  /*if (size != null) {
+                    widget.onResizeRequest(size, false);
+                  } else {
+                    setState(() {});
+                  }*/
+                },
+              ),
+            ),
+        ],
+      );
+    }
+
+    return SizedBox(
+      width: element.width.tryGetFixed(),
+      height: element.height.tryGetFixed(),
+      child: MouseRegion(
+        onEnter: (_) {
+          if (Session.hoveredElement.value == widget.element) return;
+          Session.hoveredElement.value = widget.element;
+          widget.onResizeRequest(requiredByContainerEditor, true);
+        },
+        onExit: (_) {
+          if (Session.hoveredElement.value == widget.element) {
+            Session.hoveredElement.value = null;
+            widget.onResizeRequest(Size.zero, false);
+          }
+        },
+        onHover: (_) {
+          if (Session.hoveredElement.value == null) {
+            Session.hoveredElement.value = widget.element;
+            widget.onResizeRequest(requiredByContainerEditor, true);
+          }
+        },
+        hitTestBehavior: HitTestBehavior.opaque,
+        opaque: true,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ElementWidget(
+              element: element,
+              globalKey: GlobalKey(),
+              wireframe: true,
+              overrideContent: contentOverride,
+            ),
+            ..._elementInterface(isHovering, contentOverride == null),
+            if (isHovering)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ValueListener(
+                    source: Session.hoveredElement,
+                    builder: (value) {
+                      if (value == widget.element) {
+                        debugPrint("Drawing border ${widget.key}");
+                        return DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.green, width: 1),
+                          ),
+                        );
+                      }
+                      return const SizedBox();
+                    },
+                  ),
+                ),
+              ),
+            if (isHovering)
+              Align(
+                alignment: Alignment.bottomRight,
+                child: _scaleBox(),
+              )
+          ],
+        ),
+      ),
     );
-    //},
-    //);
   }
 
-  Widget _elementInterface(bool isHovering) {
-    if (!isHovering) return widget.element!.wireframe();
+  List<Widget> _elementInterface(bool isHovering, bool showPrimary) {
+    if (!showPrimary) return [];
+    if (!isHovering) return [];
     bool isMedia = element is TextElement || element is ImageElement;
     List<MyIconButton> buttons;
     if (isMedia) {
@@ -98,58 +208,12 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         _stackButton(),
       ];
     }
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        widget.element!.wireframe(wrappedToInterface: true),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            MouseRegion(
-              cursor: SystemMouseCursors.resizeUpDown,
-              child: GestureDetector(
-                onPanStart: (details) {
-                  debugPrint("Changing cursor");
-                  Session.globalCursor.value = SystemMouseCursors.resizeUpDown;
-                },
-                onPanUpdate: (details) {
-                  //debugPrint("Pan update: ${details.delta}");
-                  if (element.height.type != SizeType.fixed) {
-                    element.height.type = SizeType.fixed;
-                  }
-                },
-                onPanEnd: (details) {
-                  debugPrint("Resetting cursor");
-                  Session.globalCursor.value = MouseCursor.defer;
-                },
-                child: Container(
-                  color: Colors.blue,
-                  height: 50,
-                  width: 50,
-                ),
-              ),
-            ),
-            MouseRegion(
-              cursor: SystemMouseCursors.resizeUpDown,
-              child: GestureDetector(
-                onPanUpdate: (details) {
-                  debugPrint("Pan update: ${details.delta}");
-                },
-                child: Container(
-                  color: Colors.blue,
-                  height: 50,
-                  width: 50,
-                ),
-              ),
-            )
-          ],
-        ),
-        Center(
-          child: _buttonContainer(buttons),
-        )
-      ],
-    );
+    return [
+      Align(
+        alignment: Alignment.center,
+        child: _buttonContainer(buttons),
+      )
+    ];
   }
 
   Widget _buttonContainer(List<MyIconButton> buttons) {
@@ -157,9 +221,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     const double padding = 8.0;
     const double spacing = 8.0;
 
-    if (buttons.isEmpty || buttons.length > 4) {
-      throw Exception("Button count must be between 1 and 4");
-    }
+    assert(buttons.length <= 4 && buttons.isNotEmpty,
+        "Button count must be between 1 and 4");
 
     return LayoutBuilder(builder: (context, constraints) {
       double aspectRatio = constraints.maxWidth / constraints.maxHeight;
@@ -211,18 +274,6 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
                 ContextMenu.close();
               }),
         );
-        /*showPopover(
-            context: context,
-            direction: PopoverDirection.top,
-            bodyBuilder: (context) {
-              return ElementPicker(
-                root: widget.root ?? widget.element!.root,
-                parent: widget.element?.parent,
-                onElementSelected: (element) {
-                  onAddChild(element);
-                },
-              );
-            });*/
       },
       secondaryAction: (_) {
         onAddChild(
@@ -269,13 +320,46 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     );
   }
 
+  Widget _scaleBox() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeUpLeftDownRight,
+      child: GestureDetector(
+        onPanStart: (details) {
+          debugPrint("Changing cursor");
+          Session.globalCursor.value = SystemMouseCursors.resizeUpDown;
+        },
+        onPanUpdate: (details) {
+          if (element.height.type != SizeType.fixed) {
+            element.height.type = SizeType.fixed;
+          }
+          if (element.width.type != SizeType.fixed) {
+            element.width.type = SizeType.fixed;
+          }
+          element.height.value =
+              (element.height.value ?? 12) + details.delta.dy;
+          element.width.value = (element.width.value ?? 12) + details.delta.dx;
+          setState(() {});
+        },
+        onPanEnd: (details) {
+          debugPrint("Resetting cursor");
+          Session.globalCursor.value = MouseCursor.defer;
+        },
+        child: Container(
+          color: Colors.blue,
+          height: 20,
+          width: 20,
+        ),
+      ),
+    );
+  }
+
   void onWrap() {
     ContainerElement wrap = ContainerElement(
         children: [element],
         type: SingleChildElementType(),
         root: element.root,
         parent: element.parent);
-    widget.onBodyChanged?.call(wrap);
+    widget.onBodyChanged?.call(wrap, widget.index);
   }
 
   void onStack() {
@@ -285,11 +369,11 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       root: element.root,
       parent: element.parent,
     );
-    widget.onBodyChanged?.call(stack);
+    widget.onBodyChanged?.call(stack, widget.index);
   }
 
   void onReplace(UIElement element) {
-    widget.onBodyChanged?.call(element);
+    widget.onBodyChanged?.call(element, widget.index);
   }
 
   void onAddChild(UIElement element) {
@@ -305,6 +389,6 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         parent: widget.element?.parent,
       );
     }
-    widget.onBodyChanged?.call(singleChildElement);
+    widget.onBodyChanged?.call(singleChildElement, widget.index);
   }
 }

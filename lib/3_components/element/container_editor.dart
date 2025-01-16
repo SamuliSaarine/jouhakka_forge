@@ -1,234 +1,205 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/3_components/element/element_builder_interface.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/container_element.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 
-class ContainerEditor extends StatefulWidget {
-  final ContainerElement element;
-  final bool isHovering;
-  final bool showBorder;
-  final void Function(AddDirection direction, UIElement element)? onAddChild;
+abstract class ContainerChildEditor {
+  Widget get elementWidget;
+  bool get isHovering;
+  void Function(AddDirection direction)? get onAddChild;
+  void Function(Size sizeRequiredOnHover) get onButtonSizeUpdate;
 
-  const ContainerEditor(
-      {super.key,
-      required this.element,
-      this.showBorder = true,
-      this.isHovering = false,
-      this.onAddChild});
+  static Widget from(
+    ContainerElement element, {
+    bool isHovering = false,
+    void Function(AddDirection direction)? onAddChild,
+    required void Function(Size sizeRequiredOnHover) onButtonSizeUpdate,
+    required List<Widget> children,
+  }) {
+    if (element.type is FlexElementType) {
+      Axis direction = (element.type as FlexElementType).direction;
+      bool axisExpands = direction == Axis.vertical
+          ? element.width.type == SizeType.expand
+          : element.height.type == SizeType.expand;
 
-  @override
-  State<ContainerEditor> createState() => _ContainerEditorState();
+      return FlexChildEditor(
+        direction,
+        key: ValueKey("${element.hashCode}_c"),
+        mainAxisSize: axisExpands ? MainAxisSize.max : MainAxisSize.min,
+        isHovering: isHovering,
+        onButtonSizeUpdate: onButtonSizeUpdate,
+        elementWidget: element.type.getWidget(children),
+      );
+    } else if (element.type is SingleChildElementType) {
+      return SingleChildEditor(
+        key: ValueKey("${element.hashCode}_c"),
+        verticalAxisSize: element.height.type == SizeType.expand
+            ? MainAxisSize.max
+            : MainAxisSize.min,
+        horizontalAxisSize: element.width.type == SizeType.expand
+            ? MainAxisSize.max
+            : MainAxisSize.min,
+        isHovering: isHovering,
+        expandInner: element.height.type == SizeType.expand,
+        onButtonSizeUpdate: onButtonSizeUpdate,
+        elementWidget: children.first,
+      );
+    }
+
+    throw Exception("Container type not supported");
+  }
 }
 
-class _ContainerEditorState extends State<ContainerEditor> {
-  ContainerElementType get type => widget.element.type;
-  UIElement? hoveringChild;
-  bool get notHovering => !widget.isHovering && hoveringChild == null;
-
+class FlexChildEditor extends StatelessWidget implements ContainerChildEditor {
   @override
-  void dispose() {
-    //debugPrint("ContainerEditor disposed");
-    super.dispose();
-  }
+  final Widget elementWidget;
+  @override
+  final bool isHovering;
+  @override
+  final void Function(AddDirection direction)? onAddChild;
+  @override
+  final void Function(Size res) onButtonSizeUpdate;
+  final Axis direction;
+  final MainAxisSize mainAxisSize;
+
+  bool get isVertical => direction == Axis.vertical;
+
+  const FlexChildEditor(
+    this.direction, {
+    super.key,
+    this.mainAxisSize = MainAxisSize.min,
+    this.isHovering = false,
+    this.onAddChild,
+    required this.onButtonSizeUpdate,
+    required this.elementWidget,
+  });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        Widget child;
-
         double buttonSize =
-            sqrt(min(constraints.maxWidth, constraints.maxHeight)) * 2;
+            sqrt(min(constraints.maxWidth, constraints.maxHeight)).toInt() * 2;
 
-        if (type is ColumnElementType) {
-          child = _vertical(buttonSize);
-        } else if (type is RowElementType) {
-          child = _horizontal(buttonSize);
-        } else {
-          child = _all(buttonSize);
+        onButtonSizeUpdate(direction == Axis.vertical
+            ? Size(0, buttonSize * 2)
+            : Size(buttonSize * 2, 0));
+
+        if (!isHovering) {
+          return elementWidget;
         }
 
-        if (widget.showBorder) {
-          child = Container(
-            decoration: BoxDecoration(
-              border: widget.element.decoration == null
-                  ? Border.all(color: Colors.blue, width: 0.5)
-                  : Border.all(color: Colors.black, width: 1),
-            ),
-            child: child,
-          );
-        }
-
-        return child;
+        return Flex(
+          mainAxisSize: mainAxisSize,
+          direction: direction,
+          children: [
+            _button(
+                isVertical ? AddDirection.top : AddDirection.left, buttonSize),
+            elementWidget,
+            _button(isVertical ? AddDirection.bottom : AddDirection.right,
+                buttonSize),
+          ],
+        );
       },
     );
   }
 
-  Widget _vertical(double buttonSize) {
-    Widget childColumn = Column(
-      children: _childrenList(),
-    );
-
-    if (notHovering) {
-      return childColumn;
-      return Padding(
-          padding: EdgeInsets.all(buttonSize / 4), child: childColumn);
-    }
-
-    if (widget.element.height.type == SizeType.expand) {
-      childColumn = Expanded(child: childColumn);
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: buttonSize / 2),
-      child: Column(
-        children: [
-          _button(AddDirection.top, buttonSize),
-          childColumn,
-          _button(AddDirection.bottom, buttonSize),
-        ],
-      ),
-    );
-  }
-
-  Widget _horizontal(double buttonSize) {
-    Widget childRow = Row(
-      children: _childrenList(),
-    );
-
-    if (notHovering) {
-      return childRow;
-      return Padding(padding: EdgeInsets.all(buttonSize / 4), child: childRow);
-    }
-
-    if (widget.element.width.type == SizeType.expand) {
-      childRow = Expanded(child: childRow);
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: buttonSize / 2),
-      child: Row(
-        children: [
-          _button(AddDirection.left, buttonSize),
-          childRow,
-          _button(AddDirection.right, buttonSize),
-        ],
-      ),
-    );
-  }
-
-  Widget _all(double buttonSize) {
-    UIElement childElement = widget.element.children[0];
-
-    Widget interface = _child(childElement);
-
-    if (notHovering) {
-      return interface;
-      return Padding(padding: EdgeInsets.all(buttonSize / 4), child: interface);
-    }
-
-    if (childElement.width.type == SizeType.expand) {
-      interface = Expanded(child: interface);
-    }
-
-    Widget row = Row(
-      children: [
-        _button(AddDirection.left, buttonSize),
-        interface,
-        _button(AddDirection.right, buttonSize),
-      ],
-    );
-
-    if (childElement.height.type == SizeType.expand) {
-      row = Expanded(child: row);
-    }
-
-    return Column(
-      children: [
-        _button(AddDirection.top, buttonSize),
-        row,
-        _button(AddDirection.bottom, buttonSize),
-      ],
-    );
-  }
-
-  Widget _button(AddDirection direction, double buttonSize) {
+  _button(AddDirection direction, double buttonSize) {
     return MyIconButton(
       icon: Icons.add,
       size: buttonSize,
       primaryAction: (details) {
-        if (type is SingleChildElementType) {
-          bool isColumn =
-              direction == AddDirection.top || direction == AddDirection.bottom;
-          ContainerElementType newType =
-              isColumn ? ColumnElementType() : RowElementType();
-          widget.element.changeContainerType(newType);
-        }
-        UIElement newElement =
-            UIElement.defaultBox(widget.element.root, parent: widget.element);
-        widget.element.addChild(newElement);
-        if (widget.onAddChild != null) {
-          widget.onAddChild!(
-            direction,
-            newElement,
-          );
-        }
-        setState(() {});
-      },
-      secondaryAction: (details) {},
-    );
-  }
-
-  List<Widget> _childrenList() {
-    List<Widget> children = [];
-    for (int i = 0; i < widget.element.children.length; i++) {
-      UIElement childElement = widget.element.children[i];
-      Widget child = _child(childElement, index: i);
-      if (childElement.expands()) {
-        child = Expanded(child: child);
-      }
-      children.add(
-        child,
-      );
-      if (i < widget.element.children.length - 1) {
-        children.add(const SizedBox(
-          height: 8,
-          width: 8,
-        ));
-      }
-    }
-    return children;
-  }
-
-  Widget _child(UIElement element, {int index = 0}) {
-    return ElementBuilderInterface(
-      key: ValueKey("${element.hashCode}_i"),
-      element: element,
-      onBodyChanged: (element) => _onChildChanged(element, index: index),
-      isHovering: element == hoveringChild,
-      onHoverChange: (hovering) {
-        if (hoveringChild == element && !hovering) {
-          setState(() {
-            hoveringChild = null;
-          });
-        } else if (hovering) {
-          setState(() {
-            hoveringChild = element;
-          });
-        }
+        onAddChild?.call(direction);
       },
     );
-  }
-
-  void _onChildChanged(UIElement element, {int index = 0}) {
-    widget.element.children[index] = element;
-    if (mounted) {
-      setState(() {});
-    }
   }
 }
 
-enum AddDirection { top, bottom, left, right }
+class SingleChildEditor extends StatelessWidget
+    implements ContainerChildEditor {
+  @override
+  final Widget elementWidget;
+  @override
+  final bool isHovering;
+  @override
+  final void Function(AddDirection direction)? onAddChild;
+  @override
+  final void Function(Size res) onButtonSizeUpdate;
+  final MainAxisSize verticalAxisSize;
+  final MainAxisSize horizontalAxisSize;
+  final bool expandInner;
+
+  const SingleChildEditor({
+    super.key,
+    this.verticalAxisSize = MainAxisSize.min,
+    this.horizontalAxisSize = MainAxisSize.min,
+    this.isHovering = false,
+    this.onAddChild,
+    this.expandInner = true,
+    required this.onButtonSizeUpdate,
+    required this.elementWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double buttonSize =
+            sqrt(min(constraints.maxWidth, constraints.maxHeight)).toInt() * 2;
+
+        onButtonSizeUpdate(Size(buttonSize * 2, buttonSize * 2));
+
+        if (!isHovering) {
+          return elementWidget;
+        }
+
+        Widget inner = Flex(
+          direction: Axis.horizontal,
+          mainAxisSize: horizontalAxisSize,
+          children: [
+            _button(AddDirection.left, buttonSize),
+            elementWidget,
+            _button(AddDirection.right, buttonSize),
+          ],
+        );
+
+        if (expandInner) {
+          inner = Expanded(child: inner);
+        }
+
+        return Flex(
+          direction: Axis.vertical,
+          mainAxisSize: verticalAxisSize,
+          children: [
+            _button(AddDirection.top, buttonSize),
+            inner,
+            _button(AddDirection.bottom, buttonSize),
+          ],
+        );
+      },
+    );
+  }
+
+  _button(AddDirection direction, double buttonSize) {
+    return MyIconButton(
+      icon: Icons.add,
+      size: buttonSize,
+      primaryAction: (details) {
+        onAddChild?.call(direction);
+      },
+    );
+  }
+}
+
+enum AddDirection {
+  top,
+  bottom,
+  left,
+  right;
+
+  Axis get axis => this == AddDirection.top || this == AddDirection.bottom
+      ? Axis.vertical
+      : Axis.horizontal;
+}
