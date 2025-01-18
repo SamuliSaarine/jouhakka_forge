@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
+import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 
@@ -36,6 +37,11 @@ class UIElement {
 
   Widget? getContentAsWireframe() {
     return null;
+  }
+
+  Resolution? getResolution() {
+    if (width.value == null || height.value == null) return null;
+    return Resolution(width: width.value!, height: height.value!);
   }
 
   bool expands() =>
@@ -106,6 +112,25 @@ class ElementDecoration {
   EV<int> borderColorHex = EV();
   EdgeInsetsGeometry? margin;
 
+  ElementDecoration(
+      {int? backgroundColor,
+      double? radius,
+      double? borderWidth,
+      int? borderColor}) {
+    if (backgroundColor != null) {
+      backgroundColorHex.value = backgroundColor;
+    }
+    if (radius != null) {
+      this.radius.value = radius;
+    }
+    if (borderWidth != null) {
+      this.borderWidth.value = borderWidth;
+    }
+    if (borderColor != null) {
+      borderColorHex.value = borderColor;
+    }
+  }
+
   Color? getBackgroundColor() {
     if (backgroundColorHex.value != null) {
       return Color(backgroundColorHex.value!);
@@ -159,17 +184,11 @@ class AxisSize {
     type = SizeType.fixed;
   }
 
-  AxisSize.auto() {
-    type = SizeType.auto;
-  }
+  AxisSize.auto({this.minPixels, this.maxPixels}) : type = SizeType.auto;
 
-  AxisSize.expand() {
-    type = SizeType.expand;
-  }
+  AxisSize.expand({this.minPixels, this.maxPixels}) : type = SizeType.expand;
 
-  AxisSize.flex(this.value) {
-    type = SizeType.flex;
-  }
+  AxisSize.flex(this.value) : type = SizeType.flex;
 
   double? tryGetFixed() {
     if (type == SizeType.fixed) {

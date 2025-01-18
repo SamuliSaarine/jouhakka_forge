@@ -1,32 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
+import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 
 class UIPage extends ElementRoot {
-  Color backgroundColor;
+  int backgroundHex;
 
   UIPage(
-      {required super.title,
-      this.backgroundColor = const Color(0xFFFFFFFF),
-      super.body})
-      : super(id: IDService.newID('pg'));
+      {required super.title, this.backgroundHex = 0xFFFFFFFF, UIElement? body})
+      : super(
+          id: IDService.newID('pg'),
+        ) {
+    super.body = body ?? UIElement(root: this, parent: null)
+      ..width = AxisSize.auto()
+      ..height = AxisSize.auto();
+  }
 
   factory UIPage.empty() {
     return UIPage(title: "New Page");
   }
 
   Widget asWidget() {
-    return Container(
-      color: backgroundColor,
-      child: body?.getContent(),
-    );
+    return ElementWidget(element: body, globalKey: GlobalKey());
   }
 }
 
 abstract class ElementRoot {
   final String id;
   String title;
-  UIElement? body;
+  late UIElement body;
 
   Map<String, dynamic> variables = {};
 
@@ -38,7 +40,11 @@ abstract class ElementRoot {
     variables.remove(key);
   }
 
-  ElementRoot({required this.id, required this.title, this.body});
+  ElementRoot({required this.id, required this.title, UIElement? body}) {
+    if (body != null) {
+      this.body = body;
+    }
+  }
 }
 
 class ElementRootFolder<T extends ElementRoot> {

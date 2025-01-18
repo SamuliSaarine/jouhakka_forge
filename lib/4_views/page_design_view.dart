@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
@@ -20,6 +21,16 @@ class _PageDesignViewState extends State<PageDesignView> {
   DesignMode _mode = DesignMode.wireframe;
   Resolution _resolution = Resolution.iphone13;
   Size _additionalResolution = const Size(0, 0);
+  UIElement get body => widget.page.body;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.page.body = UIElement(root: widget.page, parent: null)
+      ..width = AxisSize.fixed(_resolution.width)
+      ..height = AxisSize.fixed(_resolution.height)
+      ..decoration = ElementDecoration();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,32 +44,29 @@ class _PageDesignViewState extends State<PageDesignView> {
   }
 
   Widget _canvas() {
+    Resolution res = body.getResolution() ?? _resolution;
+
     return InteractiveCanvas(
-      resolution: _resolution + _additionalResolution,
-      child: Container(
-        color: widget.page.backgroundColor,
-        child: switch (_mode) {
-          DesignMode.wireframe => ElementBuilderInterface(
-              key: ValueKey("${widget.page.body.hashCode}_i"),
-              element: widget.page.body,
-              root: widget.page,
-              onBodyChanged: (element, _) {
-                debugPrint("Body changed");
-                setState(() {
-                  widget.page.body = element;
-                });
-              },
-              onResizeRequest: (size, hover) {
-                setState(() {
-                  _additionalResolution = size ?? const Size(0, 0);
-                });
-              },
-            ),
-          DesignMode.design => widget.page.asWidget(),
-          DesignMode.prototype =>
-            throw UnimplementedError("Prototype mode not implemented"),
-        },
-      ),
+      resolution: res,
+      child: switch (_mode) {
+        DesignMode.wireframe => ElementBuilderInterface(
+            key: ValueKey("${widget.page.body.hashCode}_i"),
+            element: widget.page.body,
+            root: widget.page,
+            onBodyChanged: (element, _) {
+              debugPrint("Body changed");
+              setState(() {
+                widget.page.body = element;
+              });
+            },
+            onResizeRequest: (size, hover) {
+              setState(() {});
+            },
+          ),
+        DesignMode.design => widget.page.asWidget(),
+        DesignMode.prototype =>
+          throw UnimplementedError("Prototype mode not implemented"),
+      },
     );
   }
 
@@ -121,13 +129,12 @@ class _PageDesignViewState extends State<PageDesignView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  (_resolution.width + _additionalResolution.width).toString(),
+                  (body.width.value ?? _resolution.width).toString(),
                   style: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  (_resolution.height + _additionalResolution.height)
-                      .toString(),
+                  (body.height.value ?? _resolution.height).toString(),
                   style: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w700),
                 ),
@@ -141,9 +148,7 @@ class _PageDesignViewState extends State<PageDesignView> {
               tooltip: "Desktop",
               shortcut: const CharacterActivator("1"),
               primaryAction: () {
-                setState(() {
-                  _resolution = Resolution.fullHD;
-                });
+                _updateResolution(Resolution.fullHD);
               },
             ),
             FloatingBarAction(
@@ -151,9 +156,7 @@ class _PageDesignViewState extends State<PageDesignView> {
               tooltip: "Tablet",
               shortcut: const CharacterActivator("2"),
               primaryAction: () {
-                setState(() {
-                  _resolution = Resolution.ipad10;
-                });
+                _updateResolution(Resolution.ipad10);
               },
             ),
             FloatingBarAction(
@@ -161,14 +164,21 @@ class _PageDesignViewState extends State<PageDesignView> {
               tooltip: "Mobile",
               shortcut: const CharacterActivator("3"),
               primaryAction: () {
-                setState(() {
-                  _resolution = Resolution.iphone13;
-                });
+                _updateResolution(Resolution.iphone13);
               },
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _updateResolution(Resolution resolution) {
+    UIElement body = widget.page.body;
+    body.width.value = resolution.width;
+    body.height.value = resolution.height;
+    setState(() {
+      _resolution = resolution;
+    });
   }
 }

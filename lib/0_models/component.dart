@@ -5,12 +5,13 @@ import 'package:jouhakka_forge/2_services/idservice.dart';
 class UIComponent extends ElementRoot {
   UIComponent({
     required super.title,
-    super.body,
-  }) : super(id: IDService.newID('c'));
+    UIElement? body,
+  }) : super(id: IDService.newID('c')) {
+    super.body = body ?? UIElement.defaultBox(this, parent: null);
+  }
 
   factory UIComponent.empty() {
     final component = UIComponent(title: "New Component");
-    component.body = UIElement.defaultBox(component);
     return component;
   }
 }

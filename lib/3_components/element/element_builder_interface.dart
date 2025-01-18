@@ -127,6 +127,13 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       );
     }
 
+    Widget current = ElementWidget(
+      element: element,
+      globalKey: GlobalKey(),
+      wireframe: true,
+      overrideContent: contentOverride,
+    );
+
     return SizedBox(
       width: element.width.tryGetFixed(),
       height: element.height.tryGetFixed(),
@@ -134,6 +141,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         onEnter: (_) {
           if (Session.hoveredElement.value == widget.element) return;
           Session.hoveredElement.value = widget.element;
+          debugPrint("Hovering ${widget.key}");
           widget.onResizeRequest(requiredByContainerEditor, true);
         },
         onExit: (_) {
@@ -153,12 +161,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            ElementWidget(
-              element: element,
-              globalKey: GlobalKey(),
-              wireframe: true,
-              overrideContent: contentOverride,
-            ),
+            current,
             ..._elementInterface(isHovering, contentOverride == null),
             if (isHovering)
               Positioned.fill(
