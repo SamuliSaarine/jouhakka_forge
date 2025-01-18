@@ -14,4 +14,5 @@ class Session {
       ValueNotifier(MouseCursor.defer);
   static final ValueNotifier<Resolution> totalResolution =
       ValueNotifier(Resolution.iphone13);
+  static bool hoverLocked = false;
 }

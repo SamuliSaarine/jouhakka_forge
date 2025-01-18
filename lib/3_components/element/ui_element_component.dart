@@ -61,6 +61,10 @@ class _ElementWidgetState extends State<ElementWidget> {
     double? width = widget.element.width.tryGetFixed();
     double? height = widget.element.height.tryGetFixed();
 
+    if (current != null && (width == null || height == null)) {
+      debugPrint("Element ${element.hashCode} has null width or height");
+    }
+
     constraints = (width != null || height != null)
         ? constraints?.tighten(width: width, height: height) ??
             BoxConstraints.tightFor(width: width, height: height)

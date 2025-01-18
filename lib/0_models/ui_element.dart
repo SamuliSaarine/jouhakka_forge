@@ -44,8 +44,15 @@ class UIElement {
     return Resolution(width: width.value!, height: height.value!);
   }
 
-  bool expands() =>
-      width.type == SizeType.expand || height.type == SizeType.expand;
+  bool expands({Axis? axis}) {
+    if (axis == null) {
+      return width.type == SizeType.expand || height.type == SizeType.expand;
+    } else if (axis == Axis.horizontal) {
+      return width.type == SizeType.expand;
+    } else {
+      return height.type == SizeType.expand;
+    }
+  }
 
   static UIElement fromType(
       UIElementType type, ElementRoot root, UIElement? parent) {

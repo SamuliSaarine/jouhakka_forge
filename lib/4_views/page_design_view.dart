@@ -20,7 +20,6 @@ class PageDesignView extends StatefulWidget {
 class _PageDesignViewState extends State<PageDesignView> {
   DesignMode _mode = DesignMode.wireframe;
   Resolution _resolution = Resolution.iphone13;
-  Size _additionalResolution = const Size(0, 0);
   UIElement get body => widget.page.body;
 
   @override
@@ -29,7 +28,8 @@ class _PageDesignViewState extends State<PageDesignView> {
     widget.page.body = UIElement(root: widget.page, parent: null)
       ..width = AxisSize.fixed(_resolution.width)
       ..height = AxisSize.fixed(_resolution.height)
-      ..decoration = ElementDecoration();
+      ..decoration =
+          ElementDecoration(backgroundColor: widget.page.backgroundHex);
   }
 
   @override
@@ -45,23 +45,24 @@ class _PageDesignViewState extends State<PageDesignView> {
 
   Widget _canvas() {
     Resolution res = body.getResolution() ?? _resolution;
-
+    debugPrint("Building PageDesignView");
     return InteractiveCanvas(
       resolution: res,
+      padding: res.height * 0.16,
       child: switch (_mode) {
-        DesignMode.wireframe => ElementBuilderInterface(
-            key: ValueKey("${widget.page.body.hashCode}_i"),
-            element: widget.page.body,
-            root: widget.page,
-            onBodyChanged: (element, _) {
-              debugPrint("Body changed");
-              setState(() {
-                widget.page.body = element;
-              });
-            },
-            onResizeRequest: (size, hover) {
-              setState(() {});
-            },
+        DesignMode.wireframe => RepaintBoundary(
+            child: ElementBuilderInterface(
+              globalKey:
+                  GlobalKey(), //ValueKey("${widget.page.body.hashCode}_i"),
+              element: widget.page.body,
+              root: widget.page,
+              onBodyChanged: (element, _) {
+                debugPrint("Body changed");
+                setState(() {
+                  widget.page.body = element;
+                });
+              },
+            ),
           ),
         DesignMode.design => widget.page.asWidget(),
         DesignMode.prototype =>

@@ -1,23 +1,47 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/1_helpers/functions.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/container_element.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 
-abstract class ContainerChildEditor {
-  Widget get elementWidget;
-  bool get isHovering;
-  void Function(AddDirection direction)? get onAddChild;
-  void Function(Size sizeRequiredOnHover) get onButtonSizeUpdate;
+class ContainerChildEditor extends StatelessWidget {
+  final Widget elementWidget;
+  final bool isHovering;
+  final void Function(AddDirection direction)? onAddChild;
 
-  static Widget from(
+  const ContainerChildEditor({
+    super.key,
+    required this.elementWidget,
+    this.isHovering = false,
+    this.onAddChild,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    throw UnimplementedError("Use inherited class or named constructor");
+  }
+
+  factory ContainerChildEditor.from(
     ContainerElement element, {
     bool isHovering = false,
     void Function(AddDirection direction)? onAddChild,
-    required void Function(Size sizeRequiredOnHover) onButtonSizeUpdate,
-    required List<Widget> children,
+    required Widget Function(UIElement child, int index) builder,
   }) {
+    bool expandInner = false;
+    Widget child(UIElement child, int index) {
+      if (child.expands(axis: Axis.vertical)) {
+        expandInner = true;
+      }
+      return builder(child, index);
+    }
+
+    List<Widget> children = [
+      for (int i = 0; i < element.children.length; i++)
+        child(element.children[i], i)
+    ];
+
     if (element.type is FlexElementType) {
       Axis direction = (element.type as FlexElementType).direction;
       bool axisExpands = direction == Axis.vertical
@@ -29,8 +53,8 @@ abstract class ContainerChildEditor {
         key: ValueKey("${element.hashCode}_c"),
         mainAxisSize: axisExpands ? MainAxisSize.max : MainAxisSize.min,
         isHovering: isHovering,
-        onButtonSizeUpdate: onButtonSizeUpdate,
         elementWidget: element.type.getWidget(children),
+        onAddChild: onAddChild,
       );
     } else if (element.type is SingleChildElementType) {
       return SingleChildEditor(
@@ -42,71 +66,16 @@ abstract class ContainerChildEditor {
             ? MainAxisSize.max
             : MainAxisSize.min,
         isHovering: isHovering,
-        expandInner: element.height.type == SizeType.expand,
-        onButtonSizeUpdate: onButtonSizeUpdate,
+        expandInner: expandInner,
         elementWidget: children.first,
+        onAddChild: onAddChild,
       );
     }
 
     throw Exception("Container type not supported");
   }
-}
 
-class FlexChildEditor extends StatelessWidget implements ContainerChildEditor {
-  @override
-  final Widget elementWidget;
-  @override
-  final bool isHovering;
-  @override
-  final void Function(AddDirection direction)? onAddChild;
-  @override
-  final void Function(Size res) onButtonSizeUpdate;
-  final Axis direction;
-  final MainAxisSize mainAxisSize;
-
-  bool get isVertical => direction == Axis.vertical;
-
-  const FlexChildEditor(
-    this.direction, {
-    super.key,
-    this.mainAxisSize = MainAxisSize.min,
-    this.isHovering = false,
-    this.onAddChild,
-    required this.onButtonSizeUpdate,
-    required this.elementWidget,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double buttonSize =
-            sqrt(min(constraints.maxWidth, constraints.maxHeight)).toInt() * 2;
-
-        onButtonSizeUpdate(direction == Axis.vertical
-            ? Size(0, buttonSize * 2)
-            : Size(buttonSize * 2, 0));
-
-        if (!isHovering) {
-          return elementWidget;
-        }
-
-        return Flex(
-          mainAxisSize: mainAxisSize,
-          direction: direction,
-          children: [
-            _button(
-                isVertical ? AddDirection.top : AddDirection.left, buttonSize),
-            elementWidget,
-            _button(isVertical ? AddDirection.bottom : AddDirection.right,
-                buttonSize),
-          ],
-        );
-      },
-    );
-  }
-
-  _button(AddDirection direction, double buttonSize) {
+  Widget button(AddDirection direction, double buttonSize) {
     return MyIconButton(
       icon: Icons.add,
       size: buttonSize,
@@ -117,16 +86,49 @@ class FlexChildEditor extends StatelessWidget implements ContainerChildEditor {
   }
 }
 
-class SingleChildEditor extends StatelessWidget
-    implements ContainerChildEditor {
+class FlexChildEditor extends ContainerChildEditor {
+  final Axis direction;
+  final MainAxisSize mainAxisSize;
+
+  bool get isVertical => direction == Axis.vertical;
+
+  const FlexChildEditor(
+    this.direction, {
+    super.key,
+    this.mainAxisSize = MainAxisSize.min,
+    super.isHovering,
+    super.onAddChild,
+    required super.elementWidget,
+  });
+
   @override
-  final Widget elementWidget;
-  @override
-  final bool isHovering;
-  @override
-  final void Function(AddDirection direction)? onAddChild;
-  @override
-  final void Function(Size res) onButtonSizeUpdate;
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!isHovering) {
+          return elementWidget;
+        }
+
+        double buttonSize =
+            fastSqrt(min(constraints.maxWidth, constraints.maxHeight)) * 2;
+
+        return Flex(
+          mainAxisSize: mainAxisSize,
+          direction: direction,
+          children: [
+            button(
+                isVertical ? AddDirection.top : AddDirection.left, buttonSize),
+            Expanded(child: elementWidget),
+            button(isVertical ? AddDirection.bottom : AddDirection.right,
+                buttonSize),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class SingleChildEditor extends ContainerChildEditor {
   final MainAxisSize verticalAxisSize;
   final MainAxisSize horizontalAxisSize;
   final bool expandInner;
@@ -135,33 +137,30 @@ class SingleChildEditor extends StatelessWidget
     super.key,
     this.verticalAxisSize = MainAxisSize.min,
     this.horizontalAxisSize = MainAxisSize.min,
-    this.isHovering = false,
-    this.onAddChild,
+    super.isHovering = false,
+    super.onAddChild,
     this.expandInner = true,
-    required this.onButtonSizeUpdate,
-    required this.elementWidget,
+    required super.elementWidget,
   });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        double buttonSize =
-            sqrt(min(constraints.maxWidth, constraints.maxHeight)).toInt() * 2;
-
-        onButtonSizeUpdate(Size(buttonSize * 2, buttonSize * 2));
-
         if (!isHovering) {
           return elementWidget;
         }
+
+        double buttonSize =
+            fastSqrt(min(constraints.maxWidth, constraints.maxHeight)) * 2;
 
         Widget inner = Flex(
           direction: Axis.horizontal,
           mainAxisSize: horizontalAxisSize,
           children: [
-            _button(AddDirection.left, buttonSize),
+            button(AddDirection.left, buttonSize),
             elementWidget,
-            _button(AddDirection.right, buttonSize),
+            button(AddDirection.right, buttonSize),
           ],
         );
 
@@ -173,21 +172,11 @@ class SingleChildEditor extends StatelessWidget
           direction: Axis.vertical,
           mainAxisSize: verticalAxisSize,
           children: [
-            _button(AddDirection.top, buttonSize),
+            button(AddDirection.top, buttonSize),
             inner,
-            _button(AddDirection.bottom, buttonSize),
+            button(AddDirection.bottom, buttonSize),
           ],
         );
-      },
-    );
-  }
-
-  _button(AddDirection direction, double buttonSize) {
-    return MyIconButton(
-      icon: Icons.add,
-      size: buttonSize,
-      primaryAction: (details) {
-        onAddChild?.call(direction);
       },
     );
   }

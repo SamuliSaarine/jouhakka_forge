@@ -34,26 +34,28 @@ class _InteractiveCanvasState extends State<InteractiveCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      Size size = _calculateSize(constraints);
+    return RepaintBoundary(
+      child: LayoutBuilder(builder: (context, constraints) {
+        Size size = _calculateSize(constraints);
 
-      fitToView(size, constraints);
+        fitToView(size, constraints);
 
-      return InteractiveViewer(
-        transformationController: controller,
-        minScale: 0.1,
-        maxScale: 20.0,
-        constrained: false,
-        onInteractionUpdate: (details) {},
-        child: SizedBox(
-          width: size.width,
-          height: size.height,
-          child: Center(
-            child: widget.child,
+        return InteractiveViewer(
+          transformationController: controller,
+          minScale: 0.1,
+          maxScale: 20.0,
+          constrained: false,
+          onInteractionUpdate: (details) {},
+          child: SizedBox(
+            width: size.width,
+            height: size.height,
+            child: Center(
+              child: widget.child,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      }),
+    );
   }
 
   Size _calculateSize(BoxConstraints constraints) {
