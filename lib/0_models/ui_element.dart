@@ -181,31 +181,84 @@ class ElementDecoration {
 
 enum SizeType { fixed, expand, flex, auto }
 
-class AxisSize {
-  double? value;
-  double? minPixels;
-  double? maxPixels;
-  SizeType type = SizeType.auto;
+class AxisSize extends ChangeNotifier {
+  double? _value;
+  int? _flex;
+  double? _minPixels;
+  double? _maxPixels;
+  SizeType _type = SizeType.auto;
 
-  AxisSize.fixed(this.value) {
+  double? get value => _value;
+  set value(double? value) {
+    _value = value;
+    notifyListeners();
+  }
+
+  int? get flex => _flex;
+  set flex(int? flex) {
+    _flex = flex;
+    notifyListeners();
+  }
+
+  double? get minPixels => _minPixels;
+  set minPixels(double? minPixels) {
+    _minPixels = minPixels;
+    notifyListeners();
+  }
+
+  double? get maxPixels => _maxPixels;
+  set maxPixels(double? maxPixels) {
+    _maxPixels = maxPixels;
+    notifyListeners();
+  }
+
+  SizeType get type => _type;
+  set type(SizeType type) {
+    _type = type;
+    notifyListeners();
+  }
+
+  AxisSize.fixed(this._value) {
     type = SizeType.fixed;
   }
 
-  AxisSize.auto({this.minPixels, this.maxPixels}) : type = SizeType.auto;
+  AxisSize.auto({double? minPixels, double? maxPixels})
+      : _type = SizeType.auto,
+        _minPixels = minPixels,
+        _maxPixels = maxPixels;
 
-  AxisSize.expand({this.minPixels, this.maxPixels}) : type = SizeType.expand;
+  AxisSize.expand({double? minPixels, double? maxPixels})
+      : _type = SizeType.expand,
+        _minPixels = minPixels,
+        _maxPixels = maxPixels;
 
-  AxisSize.flex(this.value) : type = SizeType.flex;
+  AxisSize.flex(int? flex)
+      : _type = SizeType.flex,
+        _flex = flex;
 
   double? tryGetFixed() {
-    if (type == SizeType.fixed) {
-      return value;
+    if (_type == SizeType.fixed) {
+      return _value;
     }
     return null;
   }
 
   bool constraints() {
-    return minPixels != null || maxPixels != null;
+    return _minPixels != null || _maxPixels != null;
+  }
+
+  @override
+  String toString() {
+    switch (_type) {
+      case SizeType.fixed:
+        return _value.toString();
+      case SizeType.expand:
+        return "Expand (${_value.toString()}), [${_minPixels.toString()} - ${_maxPixels.toString()}]";
+      case SizeType.flex:
+        return "Flex: $_flex (${_value.toString()}), [${_minPixels.toString()} - ${_maxPixels.toString()}]";
+      case SizeType.auto:
+        return "Auto (${_value.toString()}), [${_minPixels.toString()} - ${_maxPixels.toString()}]";
+    }
   }
 }
 

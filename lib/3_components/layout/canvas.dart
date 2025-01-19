@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 
 class InteractiveCanvas extends StatefulWidget {
   final Resolution resolution;
@@ -44,13 +46,23 @@ class _InteractiveCanvasState extends State<InteractiveCanvas> {
           transformationController: controller,
           minScale: 0.1,
           maxScale: 20.0,
+          scaleFactor: kDefaultMouseScrollToScaleFactor * 1.6,
           constrained: false,
           onInteractionUpdate: (details) {},
           child: SizedBox(
             width: size.width,
             height: size.height,
-            child: Center(
-              child: widget.child,
+            child: GestureDetector(
+              onTap: () {
+                debugPrint("Canvas Tapped");
+                Session.selectedElement.value = null;
+              },
+              child: ColoredBox(
+                color: const Color.fromARGB(255, 194, 208, 207),
+                child: Center(
+                  child: widget.child,
+                ),
+              ),
             ),
           ),
         );

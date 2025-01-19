@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:jouhakka_forge/0_models/container_element.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 
@@ -28,24 +27,23 @@ class _ElementWidgetState extends State<ElementWidget> {
   @override
   void initState() {
     super.initState();
-
-    if (widget.element.width.type == SizeType.fixed) {
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = widget.globalKey.currentContext;
-      if (context != null) {
-        final size = context.size;
-        if (size != null) {
-          widget.element.width.value = size.width;
-          widget.element.height.value = size.height;
-        }
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.element.width.type != SizeType.fixed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final context = widget.globalKey.currentContext;
+        if (context != null) {
+          final size = context.size;
+          if (size != null) {
+            widget.element.width.value = size.width;
+            widget.element.height.value = size.height;
+          }
+        }
+      });
+    }
+
     Widget? current = widget.overrideContent ?? widget.element.getContent();
 
     BoxConstraints? constraints =

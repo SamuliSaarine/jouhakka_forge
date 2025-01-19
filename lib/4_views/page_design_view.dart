@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
-import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/layout/canvas.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/3_components/element/element_builder_interface.dart';
 import 'package:jouhakka_forge/3_components/layout/floating_bar.dart';
-import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
+import 'package:jouhakka_forge/4_views/inspector_view.dart';
 
 class PageDesignView extends StatefulWidget {
   final UIPage page;
@@ -34,11 +33,18 @@ class _PageDesignViewState extends State<PageDesignView> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Row(
       children: [
-        _canvas(),
-        _topBar(),
-        _cornerBar(),
+        Expanded(
+          child: Stack(
+            children: [
+              _canvas(),
+              _topBar(),
+              _cornerBar(),
+            ],
+          ),
+        ),
+        InspectorView(widget.page),
       ],
     );
   }

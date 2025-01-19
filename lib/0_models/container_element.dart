@@ -84,8 +84,8 @@ class SingleChildElementType extends ContainerElementType {
 
 class FlexElementType extends ContainerElementType {
   double? spacing;
-  MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start;
-  CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start;
+  MainAxisAlignment mainAxisAlignment = MainAxisAlignment.end;
+  CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center;
   Axis direction = Axis.vertical;
 
   FlexElementType(
