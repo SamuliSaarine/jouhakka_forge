@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/layout/canvas.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
@@ -17,35 +19,69 @@ class PageDesignView extends StatefulWidget {
 }
 
 class _PageDesignViewState extends State<PageDesignView> {
-  DesignMode _mode = DesignMode.wireframe;
+  bool _holdContainerEditor = false;
+  bool _toggleContainerEditor = false;
+  DateTime? _lastTimeShiftDown;
+
   Resolution _resolution = Resolution.iphone13;
   UIElement get body => widget.page.body;
+
+  late FocusNode focusNode;
 
   @override
   void initState() {
     super.initState();
+    focusNode = FocusNode();
+    focusNode.requestFocus();
     widget.page.body = UIElement(root: widget.page, parent: null)
       ..width = AxisSize.fixed(_resolution.width)
       ..height = AxisSize.fixed(_resolution.height)
       ..decoration =
           ElementDecoration(backgroundColor: widget.page.backgroundHex);
+    Session.selectedElement.value = widget.page.body;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              _canvas(),
-              _topBar(),
-              _cornerBar(),
-            ],
+    return KeyboardListener(
+      focusNode: focusNode,
+      autofocus: true,
+      onKeyEvent: (event) {
+        if (event.logicalKey == LogicalKeyboardKey.shiftLeft) {
+          if (event is KeyDownEvent) {
+            if (_lastTimeShiftDown != null &&
+                DateTime.now().difference(_lastTimeShiftDown!) <
+                    const Duration(milliseconds: 500)) {
+              setState(() {
+                _toggleContainerEditor = !_toggleContainerEditor;
+              });
+            } else {
+              setState(() {
+                _holdContainerEditor = true;
+              });
+            }
+            _lastTimeShiftDown = DateTime.now();
+          } else if (event is KeyUpEvent) {
+            setState(() {
+              _holdContainerEditor = false;
+            });
+          }
+        }
+      },
+      child: Row(
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                _canvas(),
+                _topLeftBar(),
+                _bottomRightBar(),
+              ],
+            ),
           ),
-        ),
-        InspectorView(widget.page),
-      ],
+          InspectorView(widget.page),
+        ],
+      ),
     );
   }
 
@@ -55,122 +91,124 @@ class _PageDesignViewState extends State<PageDesignView> {
     return InteractiveCanvas(
       resolution: res,
       padding: res.height * 0.16,
-      child: switch (_mode) {
-        DesignMode.wireframe => RepaintBoundary(
-            child: ElementBuilderInterface(
-              globalKey:
-                  GlobalKey(), //ValueKey("${widget.page.body.hashCode}_i"),
-              element: widget.page.body,
-              root: widget.page,
-              onBodyChanged: (element, _) {
-                debugPrint("Body changed");
-                setState(() {
-                  widget.page.body = element;
-                });
-              },
-            ),
-          ),
-        DesignMode.design => widget.page.asWidget(),
-        DesignMode.prototype =>
-          throw UnimplementedError("Prototype mode not implemented"),
-      },
+      child: RepaintBoundary(
+        child: ElementBuilderInterface(
+          globalKey: GlobalKey(), //ValueKey("${widget.page.body.hashCode}_i"),
+          element: widget.page.body,
+          root: widget.page,
+          showContainerEditor: _toggleContainerEditor ^ _holdContainerEditor,
+          onBodyChanged: (element, _) {
+            debugPrint("Body changed");
+            setState(() {
+              widget.page.body = element;
+            });
+          },
+        ),
+      ),
     );
   }
 
-  Widget _topBar() {
+  Widget _topLeftBar() {
+    const MyIconButtonDecoration decoration = MyIconButtonDecoration(
+      iconColor: InteractiveColorSettings(color: Colors.white),
+      backgroundColor: InteractiveColorSettings(
+        color: Colors.transparent,
+        hoverColor: Color.fromARGB(75, 207, 207, 207),
+        selectedColor: Color.fromARGB(75, 207, 207, 207),
+      ),
+      padding: 12,
+      borderRadius: 0,
+      size: 24,
+    );
     return Align(
-      alignment: Alignment.topCenter,
+      alignment: Alignment.bottomLeft,
       child: Padding(
-        padding: const EdgeInsets.only(top: 20.0),
+        padding: const EdgeInsets.only(bottom: 24.0, left: 40.0),
         child: FloatingBar(
-          backgroundColor: InteractiveColorSettings(
-              color: Colors.white.withOpacity(0.6),
-              hoverColor: Colors.grey[200]!.withOpacity(0.8),
-              selectedColor: Colors.grey[500]!.withOpacity(0.4)),
+          backgroundColor: const Color.fromARGB(255, 41, 53, 59),
           borderRadius: 20,
-          iconPadding: 12,
-          iconSize: 24,
-          options: [
-            FloatingBarAction(
-              icon: Icons.dashboard_outlined,
-              tooltip: "Wireframe",
-              shortcut: const CharacterActivator("w"),
-              primaryAction: () {
+          children: [
+            MyIconButton(
+              icon: Icons.dashboard_customize_outlined,
+              tooltip:
+                  "Toggle container editor (Hold shift to hold editor, double tap to toggle)",
+              decoration: decoration,
+              isSelected: _toggleContainerEditor ^ _holdContainerEditor,
+              primaryAction: (_) {
                 setState(() {
-                  _mode = DesignMode.wireframe;
+                  _toggleContainerEditor = !_toggleContainerEditor;
                 });
               },
-            ),
-            FloatingBarAction(
-              icon: Icons.brush_outlined,
-              tooltip: "Design",
-              shortcut: const CharacterActivator("d"),
-              primaryAction: () {
-                setState(() {
-                  _mode = DesignMode.design;
-                });
-              },
-            ),
+            )
           ],
         ),
       ),
     );
   }
 
-  Widget _cornerBar() {
+  Widget _bottomRightBar() {
+    const MyIconButtonDecoration decoration = MyIconButtonDecoration(
+      iconColor: InteractiveColorSettings(color: Colors.white),
+      backgroundColor: InteractiveColorSettings(
+        color: Colors.transparent,
+        hoverColor: Color.fromARGB(75, 207, 207, 207),
+        selectedColor: Color.fromARGB(75, 207, 207, 207),
+      ),
+      padding: 12,
+      borderRadius: 0,
+      size: 24,
+    );
     return Align(
       alignment: Alignment.bottomRight,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24.0, right: 24.0),
         child: FloatingBar(
-          backgroundColor: InteractiveColorSettings(
-              color: Colors.white.withOpacity(0.5),
-              hoverColor: Colors.grey[200]!,
-              selectedColor: Colors.grey[400]!.withOpacity(0.5)),
+          backgroundColor: const Color.fromARGB(255, 41, 53, 59),
           borderRadius: 12,
-          iconPadding: 16,
-          iconSize: 20,
-          custom: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  (body.width.value ?? _resolution.width).toString(),
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  (body.height.value ?? _resolution.height).toString(),
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ],
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    (body.width.value ?? _resolution.width).toString(),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
+                  ),
+                  Text(
+                    (body.height.value ?? _resolution.height).toString(),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
+                  ),
+                ],
+              ),
             ),
-          ),
-          options: [
-            //Desktop, Tablet, Mobile
-            FloatingBarAction(
+            MyIconButton(
               icon: Icons.desktop_windows_outlined,
-              tooltip: "Desktop",
-              shortcut: const CharacterActivator("1"),
-              primaryAction: () {
+              decoration: decoration,
+              isSelected: _resolution == Resolution.fullHD,
+              primaryAction: (_) {
                 _updateResolution(Resolution.fullHD);
               },
             ),
-            FloatingBarAction(
+            MyIconButton(
               icon: Icons.tablet_mac_outlined,
-              tooltip: "Tablet",
-              shortcut: const CharacterActivator("2"),
-              primaryAction: () {
+              decoration: decoration,
+              isSelected: _resolution == Resolution.ipad10,
+              primaryAction: (_) {
                 _updateResolution(Resolution.ipad10);
               },
             ),
-            FloatingBarAction(
+            MyIconButton(
               icon: Icons.phone_android_outlined,
-              tooltip: "Mobile",
-              shortcut: const CharacterActivator("3"),
-              primaryAction: () {
+              decoration: decoration,
+              isSelected: _resolution == Resolution.iphone13,
+              primaryAction: (_) {
                 _updateResolution(Resolution.iphone13);
               },
             ),

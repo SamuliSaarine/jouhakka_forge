@@ -23,7 +23,10 @@ class ElementCategoryRow extends StatelessWidget {
           return MyTitledIconButton(
             icon: e.icon,
             tooltip: "",
-            title: e.title,
+            title: e.title +
+                (e.shortcutActivator != null
+                    ? " [${e.shortcutActivator!.triggers!.first.keyLabel}]"
+                    : ""),
             onTap: () => onElementSelected(e.type),
           );
         }).toList(),

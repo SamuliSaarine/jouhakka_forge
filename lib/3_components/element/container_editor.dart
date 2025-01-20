@@ -6,6 +6,7 @@ import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/container_element.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 
+//TODO: Subract padding from sides with buttons
 class ContainerChildEditor extends StatelessWidget {
   final Widget elementWidget;
   final bool isHovering;

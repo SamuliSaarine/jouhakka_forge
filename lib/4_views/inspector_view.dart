@@ -9,7 +9,12 @@ class InspectorView extends StatelessWidget {
   final ElementRoot root;
   const InspectorView(this.root, {super.key});
 
-  //TODO: View and edit selected element properties
+  //TODO: Make size type editable
+  //TODO: Make fixed size editable
+  //TODO: Make decoration editable
+  //TODO: Implement editor for container elements
+  //TODO: Implement editor for text elements
+  //TODO: Implement editor for image elements
   @override
   Widget build(BuildContext context) {
     bool isPage = root is Page;
@@ -57,7 +62,7 @@ class InspectorView extends StatelessWidget {
   }
 
   Widget _rootInspector(bool isPage) {
-    return Column(
+    return const Column(
       children: [],
     );
   }

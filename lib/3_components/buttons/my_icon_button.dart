@@ -8,12 +8,13 @@ class MyIconButton extends StatefulWidget {
 
   /// Long tap or right click up
   final Function(TapUpDetails details)? secondaryAction;
-  final String tooltip;
-  final double size;
   final IconData icon;
-  final InteractiveColorSettings iconColors;
-  final InteractiveColorSettings backgroundColors;
-  final double borderRadius;
+  final String tooltip;
+  final double? _size;
+  final bool isSelected;
+  final MyIconButtonDecoration decoration;
+
+  double get size => _size ?? decoration.size;
 
   const MyIconButton({
     super.key,
@@ -21,12 +22,10 @@ class MyIconButton extends StatefulWidget {
     required this.primaryAction,
     this.secondaryAction,
     this.tooltip = "",
-    this.iconColors = const InteractiveColorSettings(color: Colors.black),
-    this.backgroundColors =
-        const InteractiveColorSettings(color: Colors.transparent),
-    this.size = 24.0,
-    this.borderRadius = 8.0,
-  });
+    double? size,
+    this.decoration = const MyIconButtonDecoration(),
+    this.isSelected = false,
+  }) : _size = size;
 
   @override
   State<MyIconButton> createState() => _MyIconButtonState();
@@ -35,6 +34,7 @@ class MyIconButton extends StatefulWidget {
 class _MyIconButtonState extends State<MyIconButton> {
   bool _isPressed = false;
   bool _isHover = false;
+  MyIconButtonDecoration get d => widget.decoration;
 
   @override
   Widget build(BuildContext context) {
@@ -72,14 +72,17 @@ class _MyIconButtonState extends State<MyIconButton> {
           },
           onTapCancel: () => startPress(),
           child: Container(
+            padding: EdgeInsets.all(d.padding),
             decoration: BoxDecoration(
-              color: widget.backgroundColors.getColor(_isPressed, _isHover),
-              borderRadius: BorderRadius.circular(widget.borderRadius),
+              color: d.backgroundColor
+                  .getColor(_isPressed || widget.isSelected, _isHover),
+              borderRadius: BorderRadius.circular(d.borderRadius),
             ),
             child: Icon(
               widget.icon,
               size: widget.size,
-              color: widget.iconColors.getColor(_isPressed, _isHover),
+              color: d.iconColor
+                  .getColor(_isPressed || widget.isSelected, _isHover),
             ),
           ),
         ),
@@ -101,6 +104,41 @@ class _MyIconButtonState extends State<MyIconButton> {
 
   void endHover() {
     setState(() => _isHover = false);
+  }
+}
+
+class MyIconButtonDecoration {
+  final double size;
+
+  final InteractiveColorSettings iconColor;
+  final InteractiveColorSettings backgroundColor;
+
+  final double borderRadius;
+  final double padding;
+
+  const MyIconButtonDecoration({
+    this.size = 24.0,
+    this.iconColor = const InteractiveColorSettings(color: Colors.black),
+    this.backgroundColor =
+        const InteractiveColorSettings(color: Colors.transparent),
+    this.borderRadius = 8.0,
+    this.padding = 2.0,
+  });
+
+  MyIconButtonDecoration copyWith({
+    double? size,
+    InteractiveColorSettings? iconColor,
+    InteractiveColorSettings? backgroundColor,
+    double? borderRadius,
+    double? padding,
+  }) {
+    return MyIconButtonDecoration(
+      size: size ?? this.size,
+      iconColor: iconColor ?? this.iconColor,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      borderRadius: borderRadius ?? this.borderRadius,
+      padding: padding ?? this.padding,
+    );
   }
 }
 
