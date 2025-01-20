@@ -186,9 +186,10 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
             width: element.width.tryGetFixed(),
             height: element.height.tryGetFixed(),
             child: MouseRegion(
-              onEnter: (_) {
+              onEnter: (details) async {
                 if (Session.hoverLocked) return;
                 if (Session.hoveredElement.value == widget.element) return;
+                //await Session.allowHover(details.position);
                 Session.hoveredElement.value = widget.element;
                 if (widget.onHover != null) {
                   widget.onHover!(true);
@@ -210,6 +211,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
               onHover: (_) {
                 if (Session.hoverLocked) return;
                 if (Session.hoveredElement.value != null) return;
+                //if (!Session.checkHoverCooldown()) return;
                 debugPrint("Hover ${widget.key}");
                 Session.hoveredElement.value = widget.element;
                 if (widget.onHover != null) {

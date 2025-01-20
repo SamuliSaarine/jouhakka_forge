@@ -13,4 +13,36 @@ class Session {
       ValueNotifier(MouseCursor.defer);
   //static final ValueNotifier<Resolution> totalResolution = ValueNotifier(Resolution.iphone13);
   static bool hoverLocked = false;
+  static DateTime? _lastHoverTime;
+  static Offset? _lastHoverPosition;
+
+  /*static bool checkHoverCooldown() {
+    if (_lastHoverTime == null) {
+      _lastHoverTime = DateTime.now();
+      return true;
+    }
+    if (DateTime.now().difference(_lastHoverTime!) >
+        const Duration(milliseconds: 200)) {
+      _lastHoverTime = DateTime.now();
+      return true;
+    }
+    return false;
+  }*/
+
+  static Future allowHover(Offset position) async {
+    if (_lastHoverPosition == null || _lastHoverTime == null) {
+      _lastHoverPosition = position;
+      _lastHoverTime = DateTime.now();
+      return;
+    }
+    if ((_lastHoverPosition! - position).distance > 2 ||
+        DateTime.now().difference(_lastHoverTime!) >
+            const Duration(seconds: 2)) {
+      _lastHoverTime = DateTime.now();
+      _lastHoverPosition = position;
+      return;
+    }
+    await Future.delayed(DateTime.now().difference(_lastHoverTime!));
+    return false;
+  }
 }
