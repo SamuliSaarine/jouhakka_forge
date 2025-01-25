@@ -15,4 +15,22 @@ extension AlignmentExtension on Alignment {
     }
     throw UnimplementedError('MouseCursor for $this is not implemented');
   }
+
+  TextAlign getTextAlignment() {
+    switch (this) {
+      case Alignment.topLeft:
+      case Alignment.centerLeft:
+      case Alignment.bottomLeft:
+        return TextAlign.left;
+      case Alignment.topCenter:
+      case Alignment.center:
+      case Alignment.bottomCenter:
+        return TextAlign.center;
+      case Alignment.topRight:
+      case Alignment.centerRight:
+      case Alignment.bottomRight:
+        return TextAlign.right;
+    }
+    throw UnimplementedError('TextAlign for $this is not implemented');
+  }
 }

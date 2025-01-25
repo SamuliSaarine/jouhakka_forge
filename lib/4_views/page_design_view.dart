@@ -34,10 +34,10 @@ class _PageDesignViewState extends State<PageDesignView> {
     focusNode = FocusNode();
     focusNode.requestFocus();
     widget.page.body = UIElement(root: widget.page, parent: null)
-      ..width = AxisSize.fixed(_resolution.width)
-      ..height = AxisSize.fixed(_resolution.height)
-      ..decoration =
-          ElementDecoration(backgroundColor: widget.page.backgroundHex);
+      ..width.fixed(_resolution.width)
+      ..height.fixed(_resolution.height)
+      ..decoration.value =
+          ElementDecoration(backgroundColor: Color(widget.page.backgroundHex));
     Session.selectedElement.value = widget.page.body;
   }
 
@@ -87,13 +87,12 @@ class _PageDesignViewState extends State<PageDesignView> {
 
   Widget _canvas() {
     Resolution res = body.getResolution() ?? _resolution;
-    debugPrint("Building PageDesignView");
     return InteractiveCanvas(
       resolution: res,
       padding: res.height * 0.16,
       child: RepaintBoundary(
         child: ElementBuilderInterface(
-          globalKey: GlobalKey(), //ValueKey("${widget.page.body.hashCode}_i"),
+          globalKey: GlobalKey(),
           element: widget.page.body,
           root: widget.page,
           showContainerEditor: _toggleContainerEditor ^ _holdContainerEditor,

@@ -16,7 +16,7 @@ import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
 class ElementBuilderInterface extends StatefulWidget {
-  final void Function(UIElement element, int index)? onBodyChanged;
+  final void Function(UIElement element, int index) onBodyChanged;
 
   final UIElement? element;
   final ElementRoot? root;
@@ -35,7 +35,7 @@ class ElementBuilderInterface extends StatefulWidget {
     this.root,
     this.index = 0,
     required this.showContainerEditor,
-    this.onBodyChanged,
+    required this.onBodyChanged,
     this.scaleAlignment,
   })  : assert(
             element != null || root != null, "Element or root must be given"),
@@ -49,11 +49,13 @@ class ElementBuilderInterface extends StatefulWidget {
 
 class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   UIElement get element => widget.element!;
-  GlobalKey globalKey = GlobalKey();
-  List<GlobalKey> childKeys = [];
+  late final GlobalKey globalKey;
+  final List<GlobalKey> childKeys = [];
   double buttonSize = 20;
   bool _isSelected = false;
   bool _isHovering = false;
+  late SizeType _lastWidthType;
+  late SizeType _lastHeightType;
 
   @override
   void initState() {
@@ -64,7 +66,39 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         childKeys.add(GlobalKey());
       }
     }
+
+    _lastWidthType = element.width.type;
+    _lastHeightType = element.height.type;
+    element.addListener(updateOnChange);
     super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant ElementBuilderInterface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // If the source has changed, reattach the listener to the new source
+    if (widget.onBodyChanged != oldWidget.onBodyChanged) {
+      element.removeListener(updateOnChange);
+      element.addListener(updateOnChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    element.removeListener(updateOnChange);
+    super.dispose();
+  }
+
+  void updateOnChange() {
+    if (element.width.type != _lastWidthType ||
+        element.height.type != _lastHeightType) {
+      _lastWidthType = element.width.type;
+      _lastHeightType = element.height.type;
+      widget.onBodyChanged(element, widget.index);
+    } else {
+      setState(() {});
+    }
   }
 
   @override
@@ -76,6 +110,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
                   6));
     }
 
+    //return ChangeListener<UIElement>(
+    //source: element,
+    // builder: () {
     Widget? contentOverride;
     if (element is ContainerElement) {
       ContainerElement containerElement = element as ContainerElement;
@@ -147,13 +184,10 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       globalKey: globalKey,
       wireframe: true,
       overrideContent: contentOverride,
+      overridePadding: contentOverride != null &&
+          element.padding.hasValue &&
+          widget.showContainerEditor,
     );
-
-    /*if (element.expands()) {
-          current = Positioned.fill(
-            child: current,
-          );
-        }*/
 
     return SizedBox(
       width: element.width.tryGetFixed(),
@@ -176,6 +210,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         },
         hitTestBehavior: HitTestBehavior.opaque,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             Session.selectedElement.value = widget.element;
           },
@@ -224,6 +259,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         ),
       ),
     );
+    //},
+    //);
   }
 
   List<Widget> _elementInterface(bool showPrimary) {
@@ -385,37 +422,17 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
             Session.globalCursor.value = alignment.getScaleCursor();
           },
           onPanUpdate: (details) {
-            bool updateParent = false;
             if (alignment != Alignment.centerRight) {
-              //Vertical resize
-              if (element.height.type != SizeType.fixed) {
-                element.height.type = SizeType.fixed;
-                updateParent = true;
-              }
-
               if ((element.height.value ?? 2) < 1 && details.delta.dy < 0) {
                 debugPrint("Height too small");
                 return;
               }
 
-              element.height.value =
-                  ((element.height.value ?? 12) + details.delta.dy)
-                      .ceilToDouble();
+              element.height.add(details.delta.dy.ceilToDouble());
             }
 
             if (alignment == Alignment.bottomCenter) {
-              if (updateParent && widget.onBodyChanged != null) {
-                widget.onBodyChanged?.call(element, widget.index);
-              } else {
-                setState(() {});
-              }
               return;
-            }
-
-            //Horizontal resize
-            if (element.width.type != SizeType.fixed) {
-              element.width.type = SizeType.fixed;
-              widget.onBodyChanged?.call(element, widget.index);
             }
 
             if ((element.width.value ?? 2) < 1 && details.delta.dx < 0) {
@@ -423,14 +440,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
               return;
             }
 
-            element.width.value =
-                ((element.width.value ?? 12) + details.delta.dx).ceilToDouble();
-
-            if (updateParent && widget.onBodyChanged != null) {
-              widget.onBodyChanged?.call(element, widget.index);
-            } else {
-              setState(() {});
-            }
+            element.width.add(details.delta.dx.ceilToDouble());
           },
           onPanEnd: (details) {
             debugPrint("Resetting cursor");
@@ -462,7 +472,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         type: SingleChildElementType(),
         root: element.root,
         parent: element.parent);
-    widget.onBodyChanged?.call(wrap, widget.index);
+    widget.onBodyChanged(wrap, widget.index);
   }
 
   void onStack() {
@@ -472,11 +482,11 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       root: element.root,
       parent: element.parent,
     );
-    widget.onBodyChanged?.call(stack, widget.index);
+    widget.onBodyChanged(stack, widget.index);
   }
 
   void onReplace(UIElement element) {
-    widget.onBodyChanged?.call(element, widget.index);
+    widget.onBodyChanged(element, widget.index);
   }
 
   void onAddChild(UIElement element) {
@@ -493,6 +503,6 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       );
     }
     childKeys.add(GlobalKey());
-    widget.onBodyChanged?.call(singleChildElement, widget.index);
+    widget.onBodyChanged(singleChildElement, widget.index);
   }
 }

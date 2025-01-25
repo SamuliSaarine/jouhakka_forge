@@ -7,13 +7,15 @@ class ElementWidget extends StatefulWidget {
   final bool wireframe;
   final GlobalKey globalKey;
   final Widget? overrideContent;
+  final bool overridePadding;
 
-  const ElementWidget(
-      {required this.element,
-      required this.globalKey,
-      this.wireframe = false,
-      this.overrideContent})
-      : assert(overrideContent == null || element is ContainerElement,
+  const ElementWidget({
+    required this.element,
+    required this.globalKey,
+    this.wireframe = false,
+    this.overrideContent,
+    this.overridePadding = false,
+  })  : assert(overrideContent == null || element is ContainerElement,
             "Only container elements content can be overridden"),
         super(key: globalKey);
 
@@ -59,8 +61,13 @@ class _ElementWidgetState extends State<ElementWidget> {
     double? width = widget.element.width.tryGetFixed();
     double? height = widget.element.height.tryGetFixed();
 
-    if (current != null && (width == null || height == null)) {
-      debugPrint("Element ${element.hashCode} has null width or height");
+    if (current != null && widget.overrideContent == null) {
+      if (element.width.type == SizeType.expand) {
+        width = double.infinity;
+      }
+      if (element.height.type == SizeType.expand) {
+        height = double.infinity;
+      }
     }
 
     constraints = (width != null || height != null)
@@ -77,30 +84,55 @@ class _ElementWidgetState extends State<ElementWidget> {
       current = Align(alignment: alignment!, child: current);
     }*/
 
-    if (element.padding != null) {
-      current = Padding(padding: element.padding!, child: current);
-    }
-
-    if (element.decoration != null) {
-      ElementDecoration decoration = element.decoration!;
-      current = DecoratedBox(
-        decoration: BoxDecoration(
-          color: decoration.getBackgroundColor(),
-          borderRadius: BorderRadius.circular(decoration.getRadius()),
-          border: decoration.getBorderWidth() == 0
-              ? null
-              : Border.all(
-                  color: decoration.getBorderColor(),
-                  width: decoration.getBorderWidth(),
-                ),
-        ),
-        child: current,
-      );
-
-      if (decoration.margin != null) {
-        current = Padding(padding: decoration.margin!, child: current);
+    element.padding.ifValue((padding) {
+      if (!widget.overridePadding) {
+        current = Padding(padding: padding, child: current);
+      } else {
+        if ((element as ContainerElement).type is FlexElementType) {
+          FlexElementType flex =
+              (element as ContainerElement).type as FlexElementType;
+          if (flex.direction == Axis.vertical) {
+            current = Padding(
+              padding: EdgeInsets.only(
+                left: padding.left,
+                right: padding.right,
+              ),
+              child: current,
+            );
+          } else {
+            current = Padding(
+              padding: EdgeInsets.only(
+                top: padding.top,
+                bottom: padding.bottom,
+              ),
+              child: current,
+            );
+          }
+        }
       }
-    }
+    });
+
+    element.decoration.ifValue(
+      (decoration) {
+        current = DecoratedBox(
+          decoration: BoxDecoration(
+            color: decoration.backgroundColor.value,
+            borderRadius: BorderRadius.circular(decoration.radius.value),
+            border: decoration.borderColor.value == null
+                ? null
+                : Border.all(
+                    color: decoration.borderColor.value!,
+                    width: decoration.borderWidth.value,
+                  ),
+          ),
+          child: current,
+        );
+
+        if (decoration.margin != null) {
+          current = Padding(padding: decoration.margin!, child: current);
+        }
+      },
+    );
 
     /*if (clipBehavior != Clip.none) {
       assert(decoration != null);
@@ -156,7 +188,7 @@ extension WidgetExtension on UIElement {
     component = Container(
       width: width.tryGetFixed(),
       height: height.tryGetFixed(),
-      decoration: decoration == null
+      decoration: decoration.isNull
           ? _wireframeEmptyDecoration()
           : _wireframeDecoration(),
       child: component,

@@ -5,6 +5,9 @@ class ValueListener<T> extends StatefulWidget {
   final bool Function(T value)? condition;
   final Widget Function(T value) builder;
 
+  /// Assign a [ValueNotifier] to the `source` parameter.
+  ///
+  /// `builder` will rebuild whenever the value of the source changes.
   const ValueListener({
     super.key,
     required this.source,

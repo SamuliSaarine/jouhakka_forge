@@ -2,25 +2,25 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-class MyIconButton extends StatefulWidget {
+class MyTextButton extends StatefulWidget {
   /// Short tap or left click up
   final Function(TapUpDetails details) primaryAction;
 
   /// Long tap or right click up
   final Function(TapUpDetails details)? secondaryAction;
-  final IconData icon;
+  final String text;
   final String tooltip;
   final double? _size;
   final bool isSelected;
-  final MyIconButtonDecoration decoration;
+  final MyTextButtonDecoration decoration;
 
   double get size => _size ?? decoration.size;
 
-  const MyIconButton({
+  const MyTextButton({
     super.key,
 
     /// What would icon button be without an icon?
-    required this.icon,
+    required this.text,
 
     /// Short tap or left click up
     required this.primaryAction,
@@ -35,20 +35,20 @@ class MyIconButton extends StatefulWidget {
     double? size,
 
     /// Visual settings for the button
-    this.decoration = const MyIconButtonDecoration(),
+    this.decoration = const MyTextButtonDecoration(),
 
     /// If true, toggle's the button's appearance to same as when pressed
     this.isSelected = false,
   }) : _size = size;
 
   @override
-  State<MyIconButton> createState() => _MyIconButtonState();
+  State<MyTextButton> createState() => _MyTextButtonState();
 }
 
-class _MyIconButtonState extends State<MyIconButton> {
+class _MyTextButtonState extends State<MyTextButton> {
   bool _isPressed = false;
   bool _isHover = false;
-  MyIconButtonDecoration get d => widget.decoration;
+  MyTextButtonDecoration get d => widget.decoration;
 
   @override
   Widget build(BuildContext context) {
@@ -95,11 +95,13 @@ class _MyIconButtonState extends State<MyIconButton> {
                   .getColor(_isPressed || widget.isSelected, _isHover),
               borderRadius: BorderRadius.circular(d.borderRadius),
             ),
-            child: Icon(
-              widget.icon,
-              size: widget.size,
-              color: d.iconColor
-                  .getColor(_isPressed || widget.isSelected, _isHover),
+            child: Text(
+              widget.text,
+              style: TextStyle(
+                fontSize: widget.size,
+                color: d.iconColor
+                    .getColor(_isPressed || widget.isSelected, _isHover),
+              ),
             ),
           ),
         ),
@@ -124,7 +126,7 @@ class _MyIconButtonState extends State<MyIconButton> {
   }
 }
 
-class MyIconButtonDecoration {
+class MyTextButtonDecoration {
   final double size;
 
   final InteractiveColorSettings iconColor;
@@ -133,8 +135,8 @@ class MyIconButtonDecoration {
   final double borderRadius;
   final double padding;
 
-  /// Visual settings for [MyIconButton]
-  const MyIconButtonDecoration({
+  /// Visual settings for [MyTextButton]
+  const MyTextButtonDecoration({
     /// Size of the icon
     this.size = 24.0,
 
@@ -153,7 +155,7 @@ class MyIconButtonDecoration {
   });
 
   /// Copy other [MyIconButtonDecoration] with some values overridden
-  MyIconButtonDecoration copyWith({
+  MyTextButtonDecoration copyWith({
     /// Size of the icon
     double? size,
 
@@ -169,7 +171,7 @@ class MyIconButtonDecoration {
     /// Padding between the icon and the borders of the container
     double? padding,
   }) {
-    return MyIconButtonDecoration(
+    return MyTextButtonDecoration(
       size: size ?? this.size,
       iconColor: iconColor ?? this.iconColor,
       backgroundColor: backgroundColor ?? this.backgroundColor,

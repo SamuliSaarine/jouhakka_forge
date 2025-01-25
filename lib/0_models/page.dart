@@ -4,16 +4,17 @@ import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 
 class UIPage extends ElementRoot {
+  /// The background color of the page as a hex value.s
   int backgroundHex;
 
+  /// [UIPage] is [ElementRoot] that scales to the size of the screen and one can navigate to.
+  /// One layer can have only one [UIPage].
   UIPage(
       {required super.title, this.backgroundHex = 0xFFFFFFFF, UIElement? body})
       : super(
           id: IDService.newID('pg'),
         ) {
-    super.body = body ?? UIElement(root: this, parent: null)
-      ..width = AxisSize.auto()
-      ..height = AxisSize.auto();
+    super.body = body ?? UIElement(root: this, parent: null);
   }
 
   factory UIPage.empty() {
@@ -25,6 +26,7 @@ class UIPage extends ElementRoot {
   }
 }
 
+/// Base class for models that can be the root of an element tree.
 abstract class ElementRoot {
   final String id;
   String title;
@@ -38,6 +40,20 @@ abstract class ElementRoot {
 
   void removeVariable(String key) {
     variables.remove(key);
+  }
+
+  T getVariable<T>(String key) {
+    try {
+      return variables[key] as T;
+    } catch (e) {
+      if (variables[key] == null) {
+        throw "Variable $key is null";
+      } else if (variables[key] is! T) {
+        throw "Variable $key is not of type $T";
+      } else {
+        rethrow;
+      }
+    }
   }
 
   ElementRoot({required this.id, required this.title, UIElement? body}) {

@@ -3,9 +3,13 @@ import 'package:jouhakka_forge/0_models/ui_element.dart';
 import '../3_components/element/ui_element_component.dart';
 
 class ContainerElement extends UIElement {
+  /// List of [UIElement]s that are direct children of this container.
   final List<UIElement> children;
+
+  /// Specifies how the [ContainerElement] acts and is displayed.
   ContainerElementType type;
 
+  /// [UIElement] that can contain one or more [UIElement]s.
   ContainerElement({
     required this.children,
     required this.type,
@@ -35,6 +39,9 @@ class ContainerElement extends UIElement {
     type = newType;
   }
 
+  /// Creates a [ContainerElement] from a [UIElement].
+  ///
+  /// Useful if you want to keep decoration or size settings from the original element.
   factory ContainerElement.from(UIElement element,
       {required ContainerElementType type, required List<UIElement> children}) {
     return ContainerElement(
@@ -42,12 +49,13 @@ class ContainerElement extends UIElement {
         type: type,
         root: element.root,
         parent: element.parent)
-      ..width = element.width
-      ..height = element.height
-      ..decoration = element.decoration
-      ..padding = element.padding;
+      ..width.copy(element.width)
+      ..height.copy(element.height)
+      ..decoration.value = element.decoration.value
+      ..padding.value = element.padding.value;
   }
 
+  /// Returns the content of the container.
   @override
   Widget? getContent() {
     if (children.isEmpty) return null;
@@ -65,13 +73,21 @@ class ContainerElement extends UIElement {
     }
     return type.getWidget(widgetChildren);
   }
+
+  @override
+  String get label => type.label;
 }
 
 abstract class ContainerElementType {
+  /// Returns a [Widget] that contains the children.
   Widget getWidget(List<Widget> children);
+  String get label;
 }
 
 class SingleChildElementType extends ContainerElementType {
+  /// [ContainerElementType] that can only have one child.
+  SingleChildElementType();
+
   @override
   Widget getWidget(List<Widget> children) {
     if (children.length != 1) {
@@ -80,6 +96,9 @@ class SingleChildElementType extends ContainerElementType {
     }
     return children[0];
   }
+
+  @override
+  String get label => "Container";
 }
 
 class FlexElementType extends ContainerElementType {
@@ -88,6 +107,7 @@ class FlexElementType extends ContainerElementType {
   CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center;
   Axis direction = Axis.vertical;
 
+  /// [ContainerElementType] that arranges children in a row or column.
   FlexElementType(
     this.direction, {
     this.spacing,
@@ -119,6 +139,9 @@ class FlexElementType extends ContainerElementType {
       children: children,
     );
   }
+
+  @override
+  String get label => "Flex";
 }
 
 //StackElement
@@ -126,6 +149,7 @@ class StackElementType extends ContainerElementType {
   AlignmentGeometry alignment = AlignmentDirectional.topStart;
   StackFit fit = StackFit.loose;
 
+  /// [ContainerElementType] that arranges children in a stack.
   StackElementType(
       {this.alignment = AlignmentDirectional.topStart,
       this.fit = StackFit.loose});
@@ -137,6 +161,9 @@ class StackElementType extends ContainerElementType {
       children: children,
     );
   }
+
+  @override
+  String get label => "Stack";
 }
 
 //GridElement
@@ -158,4 +185,7 @@ class GridElementType extends ContainerElementType {
       children: children,
     );
   }
+
+  @override
+  String get label => "Grid";
 }

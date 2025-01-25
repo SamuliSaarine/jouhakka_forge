@@ -5,6 +5,9 @@ class ChangeListener<T extends ChangeNotifier> extends StatefulWidget {
   final bool Function()? condition;
   final Widget Function() builder;
 
+  /// Put a model that extends [ChangeNotifier] in the `source` parameter.
+  ///
+  /// `Builder` will rebuild whenever you call `notifyListeners()` on the source.
   const ChangeListener({
     super.key,
     required this.source,
@@ -40,7 +43,6 @@ class ChangeListenerState<T extends ChangeNotifier>
   }
 
   void _onValueChanged() {
-    debugPrint("Hi I changed");
     if (widget.condition != null && !widget.condition!()) return;
     setState(() {});
   }
@@ -53,7 +55,6 @@ class ChangeListenerState<T extends ChangeNotifier>
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("Change Listener Rebuild ${widget.source}");
     return widget.builder();
   }
 }

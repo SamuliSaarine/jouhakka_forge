@@ -6,7 +6,6 @@ import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/container_element.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 
-//TODO: Subract padding from sides with buttons
 class ContainerChildEditor extends StatelessWidget {
   final Widget elementWidget;
   final bool isHovering;
@@ -77,12 +76,24 @@ class ContainerChildEditor extends StatelessWidget {
   }
 
   Widget button(AddDirection direction, double buttonSize) {
-    return MyIconButton(
-      icon: Icons.add,
-      size: buttonSize,
-      primaryAction: (details) {
-        onAddChild?.call(direction);
-      },
+    return Padding(
+      padding: EdgeInsets.all(buttonSize * 0.2),
+      child: MyIconButton(
+        icon: Icons.add,
+        size: buttonSize * 0.8,
+        decoration: MyIconButtonDecoration(
+          iconColor: const InteractiveColorSettings(color: Colors.white),
+          backgroundColor: const InteractiveColorSettings(
+            color: Colors.blue,
+            hoverColor: Color.fromARGB(255, 25, 111, 182),
+            selectedColor: Color.fromARGB(255, 17, 44, 67),
+          ),
+          borderRadius: buttonSize * 0.2,
+        ),
+        primaryAction: (details) {
+          onAddChild?.call(direction);
+        },
+      ),
     );
   }
 }
