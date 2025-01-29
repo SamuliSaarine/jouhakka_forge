@@ -24,6 +24,12 @@ class UIPage extends ElementRoot {
   Widget asWidget() {
     return ElementWidget(element: body, globalKey: GlobalKey());
   }
+
+  @override
+  String type({bool plural = false, bool capital = true}) {
+    String type = capital ? "Page" : "page";
+    return plural ? "${type}s" : type;
+  }
 }
 
 /// Base class for models that can be the root of an element tree.
@@ -61,6 +67,8 @@ abstract class ElementRoot {
       this.body = body;
     }
   }
+
+  String type({bool plural = false, bool capital = true});
 }
 
 class ElementRootFolder<T extends ElementRoot> {
@@ -79,10 +87,12 @@ class ElementRootFolder<T extends ElementRoot> {
   }
 
   void addNewFolder(String name) {
-    folders.add(ElementRootFolder(name, parent: this));
+    debugPrint("Adding new folder $name | ${T.toString()}");
+    folders.add(ElementRootFolder<T>(name, parent: this));
   }
 
   void addNewItem(T item) {
+    debugPrint("Adding new item $item | ${T.toString()}");
     items.add(item);
   }
 
@@ -95,9 +105,14 @@ class ElementRootFolder<T extends ElementRoot> {
     return null;
   }
 
-  ElementRootFolder(this.name,
-      {this.parent, this.items = const [], this.folders = const []})
-      : isExpanded = true;
+  ElementRootFolder(
+    this.name, {
+    this.parent,
+    List<ElementRootFolder<T>>? folders,
+    List<T>? items,
+  })  : isExpanded = true,
+        folders = folders ?? [],
+        items = items ?? [];
 }
 
 enum DesignMode { wireframe, design, prototype }

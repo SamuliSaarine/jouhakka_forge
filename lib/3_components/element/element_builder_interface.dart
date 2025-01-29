@@ -5,7 +5,7 @@ import 'package:jouhakka_forge/0_models/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/1_helpers/functions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
-import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
+import 'package:jouhakka_forge/3_components/layout/context_popup.dart';
 import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
@@ -344,7 +344,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       tooltip: "Add child",
       size: size,
       primaryAction: (details) {
-        ContextMenu.open(
+        ContextPopup.open(
           context,
           clickPosition: details.globalPosition,
           child: ElementPicker(
@@ -352,7 +352,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
               parent: widget.element?.parent,
               onElementSelected: (element) {
                 onAddChild(element);
-                ContextMenu.close();
+                ContextPopup.close();
               }),
         );
       },
@@ -390,7 +390,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       icon: Icons.sync,
       size: size,
       primaryAction: (details) {
-        ContextMenu.open(
+        ContextPopup.open(
           context,
           clickPosition: details.globalPosition,
           child: ElementPicker(

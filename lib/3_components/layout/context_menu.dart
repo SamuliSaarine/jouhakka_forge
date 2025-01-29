@@ -1,69 +1,114 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:jouhakka_forge/3_components/click_detector.dart';
+import 'package:jouhakka_forge/3_components/layout/context_popup.dart';
 
-class ContextMenu {
-  static OverlayEntry? _overlayEntry;
+class ContextMenu extends StatefulWidget {
+  final List<ContextMenuItem> items;
+  const ContextMenu(this.items, {super.key});
 
-  /// Open a context menu with default builder.
   static void open(
-    BuildContext context, {
-    required Offset clickPosition,
-    required Widget child,
-  }) {
-    // Close any existing context menu
-    close();
+      BuildContext context, Offset position, List<ContextMenuItem> items) {
+    ContextPopup.open(
+      context,
+      clickPosition: position,
+      child: ContextMenu(items),
+    );
+  }
 
-    _overlayEntry = OverlayEntry(
-      builder: (_) {
-        return Material(
-          type: MaterialType.transparency,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Default position is the click position
-              double dx = clickPosition.dx;
-              double dy = clickPosition.dy;
+  @override
+  State<ContextMenu> createState() => _ContextMenuState();
+}
 
-              return Stack(
-                children: [
-                  GestureDetector(
-                    onTap: close,
-                    behavior: HitTestBehavior.translucent,
-                    child: Container(color: Colors.transparent),
-                  ),
-                  Positioned(
-                    left: dx,
-                    top: dy,
-                    child: child,
-                  )
-                ],
-              );
-            },
-          ),
-        );
+class _ContextMenuState extends State<ContextMenu> {
+  int hovering = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Column(
+          children: [
+            for (int i = 0; i < widget.items.length; i++)
+              _buildItem(widget.items[i], i),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItem(ContextMenuItem item, int index) {
+    bool enabled = true;
+    if (item.condition != null) {
+      enabled = item.condition!();
+    }
+    return ClickDetector(
+      primaryAction: enabled
+          ? () {
+              item.action();
+              ContextPopup.close();
+            }
+          : null,
+      onPointerEvent: (event) {
+        if (event is PointerExitEvent) {
+          if (hovering != index) return;
+          setState(() {
+            hovering = -1;
+          });
+        } else if (index != hovering) {
+          setState(() {
+            hovering = index;
+          });
+        }
       },
+      opaque: true,
+      child: ColoredBox(
+        color: hovering == index ? Colors.grey[200]! : Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              Text(
+                item.text,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: enabled ? Colors.black : Colors.grey,
+                ),
+              ),
+              if (item.shortcut != null) ...[
+                const Spacer(),
+                Text(item.shortcut!.toString()),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
-
-    // Insert the overlay
-    Overlay.of(context).insert(_overlayEntry!);
   }
+}
 
-  /// Open a context menu with custom builder.
-  static void build(
-    BuildContext context, {
-    required Widget Function(BuildContext) builder,
-  }) {
-    // Close any existing context menu
-    close();
+class ContextMenuItem {
+  final String text;
+  final ShortcutActivator? shortcut;
+  final bool Function()? condition;
+  final Function() action;
 
-    _overlayEntry = OverlayEntry(
-      builder: builder,
-    );
-
-    // Insert the overlay
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  static void close() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
+  const ContextMenuItem(
+    this.text, {
+    this.shortcut,
+    this.condition,
+    required this.action,
+  });
 }

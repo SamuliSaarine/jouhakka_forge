@@ -19,4 +19,10 @@ class UIComponent extends ElementRoot {
     final component = UIComponent(title: "New Component");
     return component;
   }
+
+  @override
+  String type({bool plural = false, bool capital = true}) {
+    String type = capital ? "Component" : "component";
+    return plural ? "${type}s" : type;
+  }
 }

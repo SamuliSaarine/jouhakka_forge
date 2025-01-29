@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/project.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/4_views/page_design_view.dart';
 import 'package:jouhakka_forge/3_components/layout/side_bar.dart';
 
@@ -18,6 +19,7 @@ class _EditorViewState extends State<EditorView> {
 
   @override
   void initState() {
+    Session.currentProject.value = project;
     UIPage? page = project.pages.first;
     if (page == null) {
       throw Exception("Project must have at least one page");

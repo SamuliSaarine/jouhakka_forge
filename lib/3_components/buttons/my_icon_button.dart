@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/3_components/layout/my_tooltip.dart';
 
 class MyIconButton extends StatefulWidget {
   /// Short tap or left click up
@@ -58,10 +59,8 @@ class _MyIconButtonState extends State<MyIconButton> {
       opaque: false,
       onEnter: (_) => startHover(),
       onExit: (_) => endHover(),
-      child: Tooltip(
-        message: widget.tooltip,
-        preferBelow: true,
-        waitDuration: const Duration(milliseconds: 500),
+      child: MyTooltip(
+        widget.tooltip,
         // Handle press events
         child: GestureDetector(
           onTapDown: (_) => startPress(),
