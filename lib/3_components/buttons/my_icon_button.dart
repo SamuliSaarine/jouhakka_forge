@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/3_components/layout/my_tooltip.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
 
 class MyIconButton extends StatefulWidget {
   /// Short tap or left click up
@@ -176,6 +177,17 @@ class MyIconButtonDecoration {
       padding: padding ?? this.padding,
     );
   }
+
+  static const MyIconButtonDecoration onDarkBar = MyIconButtonDecoration(
+    iconColor: InteractiveColorSettings(color: Colors.white),
+    borderRadius: 0,
+    backgroundColor: InteractiveColorSettings(
+      color: Colors.transparent,
+      hoverColor: MyColors.mildDifference,
+      selectedColor: MyColors.mediumDifference,
+    ),
+    padding: 8,
+  );
 }
 
 class InteractiveColorSettings {

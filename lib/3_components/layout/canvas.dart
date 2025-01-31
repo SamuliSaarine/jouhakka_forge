@@ -80,13 +80,13 @@ class _InteractiveCanvasState extends State<InteractiveCanvas> {
 
     if (ratio > 1 && resolution.width > viewWidth) {
       width = resolution.width;
-      height = resolution.width / ratio;
+      height = resolution.height * (width / viewWidth);
       double scaleToConstraints = height - viewHeight;
       if (scaleToConstraints > 0) {
         width += scaleToConstraints;
       }
       height += padding * 2;
-      width += padding * 2;
+      width += padding / ratio;
     } else if (ratio <= 1 && resolution.height > viewHeight) {
       height = resolution.height + padding * 2;
       double scaleToConstraints = height / viewHeight;

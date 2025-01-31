@@ -169,6 +169,7 @@ class SingleChildEditor extends ContainerChildEditor {
         Widget inner = Flex(
           direction: Axis.horizontal,
           mainAxisSize: horizontalAxisSize,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             button(AddDirection.left, buttonSize),
             elementWidget,

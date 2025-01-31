@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/component.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
+import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/layout/root_selector_list.dart';
 import 'package:jouhakka_forge/4_views/page_design_view.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
 
 class SideBar extends StatefulWidget {
   final Function(Widget view) onViewChange;
@@ -30,12 +32,14 @@ class _SideBarState extends State<SideBar> {
         icon: Icons.devices_outlined,
         panelBuilder: () => RootSelectorPanel<UIPage>(
             Session.currentProject.value!.pages, onSelection: (page) {
+          Session.lastPage.value = page;
           widget.onViewChange(PageDesignView(page));
         }),
         viewBuilder: () {
           UIPage? page = Session.lastPage.value ??
               Session.currentProject.value!.pages.first;
           if (page != null) {
+            Session.lastPage.value = page;
             return PageDesignView(page);
           } else {
             return const Center(
@@ -60,8 +64,9 @@ class _SideBarState extends State<SideBar> {
       MenuOption(
         "Assets",
         icon: Icons.image_outlined,
-        panelBuilder: () => const Center(
-          child: Text("No Assets Found"),
+        panelBuilder: () => Center(
+          child:
+              Text("No Assets Found", style: TextStyle(color: MyColors.text)),
         ),
         viewBuilder: () => const Center(
           child: Text("No Assets Found"),
@@ -127,7 +132,7 @@ class _SideBarState extends State<SideBar> {
       child: Row(
         children: [
           ColoredBox(
-            color: Colors.white,
+            color: MyColors.background,
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: Column(
@@ -160,12 +165,12 @@ class _SideBarState extends State<SideBar> {
       icon: item.icon,
       tooltip: item.title,
       isSelected: this.index == index,
-      decoration: const MyIconButtonDecoration(
-        iconColor: InteractiveColorSettings(color: Colors.black),
-        backgroundColor: InteractiveColorSettings(
-          color: Colors.white,
-          hoverColor: Color.fromARGB(255, 240, 240, 240),
-          selectedColor: Color.fromARGB(255, 220, 220, 220),
+      decoration: MyIconButtonDecoration(
+        iconColor: InteractiveColorSettings(color: MyColors.text),
+        backgroundColor: const InteractiveColorSettings(
+          color: Colors.transparent,
+          hoverColor: MyColors.mildDifference,
+          selectedColor: MyColors.strongDifference,
         ),
         size: 28,
         padding: 8,

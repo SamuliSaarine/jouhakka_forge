@@ -1,47 +1,79 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
 
 class FloatingBar extends StatelessWidget {
-  final Color backgroundColor;
-  final double borderRadius;
-  final BoxShadow? shadow;
+  final FloatingBarDecoration decoration;
   final Axis direction;
   final List<Widget> children;
 
   const FloatingBar({
     super.key,
-    this.backgroundColor = Colors.white,
-    this.borderRadius = 8,
-    this.shadow = const BoxShadow(
-      color: Color(0x28000000),
-      spreadRadius: 1,
-      blurRadius: 2,
-      offset: Offset(0, 1),
-    ),
     this.direction = Axis.horizontal,
+    this.decoration = FloatingBarDecoration.shadowedLightMode,
     required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            boxShadow: shadow != null ? [shadow!] : null,
-          ),
-          child: Flex(
-            direction: direction,
-            mainAxisSize: MainAxisSize.min,
-            children: children,
-          ),
-        ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: decoration.backgroundColor,
+        borderRadius: BorderRadius.circular(decoration.borderRadius),
+        boxShadow: decoration.shadow != null ? [decoration.shadow!] : null,
+      ),
+      child: Flex(
+        direction: direction,
+        mainAxisSize: MainAxisSize.min,
+        children: children,
       ),
     );
   }
+}
+
+class FloatingBarDecoration {
+  final Color backgroundColor;
+  final double borderRadius;
+  final BoxShadow? shadow;
+
+  const FloatingBarDecoration({
+    this.backgroundColor = MyColors.lighterCharcoal,
+    this.borderRadius = 8,
+    this.shadow,
+  });
+
+  static const FloatingBarDecoration flatLightMode = FloatingBarDecoration(
+    backgroundColor: MyColors.darkerCharcoal,
+    borderRadius: 12,
+  );
+
+  static const FloatingBarDecoration flatDarkMode = FloatingBarDecoration(
+    backgroundColor: MyColors.lighterCharcoal,
+    borderRadius: 12,
+  );
+
+  static const FloatingBarDecoration shadowedLightMode = FloatingBarDecoration(
+    backgroundColor: MyColors.darkerCharcoal,
+    borderRadius: 12,
+    shadow: _lightShadow,
+  );
+
+  static const FloatingBarDecoration shadowedDarkMode = FloatingBarDecoration(
+    backgroundColor: MyColors.lighterCharcoal,
+    borderRadius: 12,
+    shadow: _heavyShadow,
+  );
+
+  static const BoxShadow _lightShadow = BoxShadow(
+    color: Color.fromARGB(64, 0, 0, 0),
+    spreadRadius: 2,
+    blurRadius: 8,
+    offset: Offset(0, 2),
+  );
+
+  static const BoxShadow _heavyShadow = BoxShadow(
+    color: Color.fromARGB(128, 0, 0, 0),
+    spreadRadius: 4,
+    blurRadius: 8,
+    offset: Offset(0, 4),
+  );
 }

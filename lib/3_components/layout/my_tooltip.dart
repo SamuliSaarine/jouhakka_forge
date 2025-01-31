@@ -22,6 +22,15 @@ class _MyTooltipState extends State<MyTooltip> {
   late Offset _position;
 
   @override
+  void dispose() {
+    if (_isShown) {
+      ContextPopup.closeSecondary();
+      _isShown = false;
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MouseRegion(
       opaque: false,
@@ -46,6 +55,7 @@ class _MyTooltipState extends State<MyTooltip> {
       onHover: (event) => _position = event.position,
       onExit: (event) {
         _isHovering = false;
+        debugPrint("Closing tooltip");
         if (_isShown) {
           ContextPopup.closeSecondary();
           _isShown = false;

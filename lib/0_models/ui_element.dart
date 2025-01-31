@@ -104,6 +104,8 @@ class UIElement extends ChangeNotifier {
         return TextElement(root: root, parent: parent);
       case UIElementType.image:
         return ImageElement(root: root, parent: parent);
+      case UIElementType.icon:
+        return IconElement(root: root, parent: parent, icon: Icons.star);
     }
   }
 
@@ -260,11 +262,18 @@ enum SizeType { fixed, expand, flex, auto }
 
 class AxisSize extends ChangeNotifier {
   //Size in the axis in pixels. If the type is not fixed, and ElementWidget of UIElement is not built, this value is null.
-  double? value;
+  double? _value;
+  double? get value => _value;
+  set value(double? value) {
+    _value = value;
+    notifyListeners();
+  }
+
   int? _flex;
   double? _minPixels;
   double? _maxPixels;
   SizeType _type = SizeType.expand;
+  Function()? valueListener;
 
   int? get flex => _flex;
   set flex(int? flex) {
@@ -292,7 +301,7 @@ class AxisSize extends ChangeNotifier {
 
   /// Set [UIElement] size in axis to a fixed pixel value.
   void fixed(double value) {
-    this.value = value;
+    _value = value;
     type = SizeType.fixed;
     notifyListeners();
   }
@@ -300,9 +309,9 @@ class AxisSize extends ChangeNotifier {
   void add(double value) {
     if (_type != SizeType.fixed) {
       _type = SizeType.fixed;
-      this.value ??= 8;
+      _value ??= 8;
     }
-    this.value = this.value! + value;
+    _value = _value! + value;
     notifyListeners();
   }
 
@@ -318,6 +327,7 @@ class AxisSize extends ChangeNotifier {
     _type = SizeType.auto;
     _minPixels = minPixels;
     _maxPixels = maxPixels;
+    notifyListeners();
   }
 
   /// [UIElement] tries to fill all the available space in the axis.
@@ -332,14 +342,16 @@ class AxisSize extends ChangeNotifier {
     _minPixels = minPixels;
     _maxPixels = maxPixels;
     _flex = flex;
+    notifyListeners();
   }
 
   void copy(AxisSize other) {
-    value = other.value;
+    _value = other.value;
     _flex = other._flex;
     _minPixels = other._minPixels;
     _maxPixels = other._maxPixels;
     _type = other._type;
+    notifyListeners();
   }
 
   /// Retuns [UIElement] size in the axis, if the type is fixed.

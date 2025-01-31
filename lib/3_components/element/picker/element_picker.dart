@@ -33,10 +33,14 @@ class _ElementPickerState extends State<ElementPicker> {
           type: UIElementType.text,
           icon: Icons.text_fields,
           shortcutActivator: SingleActivator(LogicalKeyboardKey.keyT)),
+      ElementButtonData("Icon",
+          type: UIElementType.icon,
+          icon: Icons.star,
+          shortcutActivator: SingleActivator(LogicalKeyboardKey.keyI)),
       ElementButtonData("Image",
           type: UIElementType.image,
           icon: Icons.image,
-          shortcutActivator: SingleActivator(LogicalKeyboardKey.keyI)),
+          shortcutActivator: SingleActivator(LogicalKeyboardKey.keyM)),
     ],
   };
 
@@ -119,4 +123,5 @@ enum UIElementType {
   box,
   text,
   image,
+  icon,
 }

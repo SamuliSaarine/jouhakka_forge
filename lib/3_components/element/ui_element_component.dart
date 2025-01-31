@@ -8,6 +8,7 @@ class ElementWidget extends StatefulWidget {
   final GlobalKey globalKey;
   final Widget? overrideContent;
   final bool overridePadding;
+  final bool canApplyInfinity;
 
   const ElementWidget({
     required this.element,
@@ -15,6 +16,7 @@ class ElementWidget extends StatefulWidget {
     this.wireframe = false,
     this.overrideContent,
     this.overridePadding = false,
+    required this.canApplyInfinity,
   })  : assert(overrideContent == null || element is ContainerElement,
             "Only container elements content can be overridden"),
         super(key: globalKey);
@@ -39,8 +41,12 @@ class _ElementWidgetState extends State<ElementWidget> {
         if (context != null) {
           final size = context.size;
           if (size != null) {
-            widget.element.width.value = size.width;
-            widget.element.height.value = size.height;
+            if (size.width != widget.element.width.value) {
+              widget.element.width.value = size.width;
+            }
+            if (size.height != widget.element.height.value) {
+              widget.element.height.value = size.height;
+            }
           }
         }
       });
@@ -61,12 +67,14 @@ class _ElementWidgetState extends State<ElementWidget> {
     double? width = widget.element.width.tryGetFixed();
     double? height = widget.element.height.tryGetFixed();
 
-    if (current != null && widget.overrideContent == null) {
+    if (current != null && widget.canApplyInfinity) {
       if (element.width.type == SizeType.expand) {
         width = double.infinity;
+        debugPrint("Width is expanded in ${element.id}");
       }
       if (element.height.type == SizeType.expand) {
         height = double.infinity;
+        debugPrint("Height is expanded in ${element.id}");
       }
     }
 
@@ -114,9 +122,11 @@ class _ElementWidgetState extends State<ElementWidget> {
 
     element.decoration.ifValue(
       (decoration) {
+        Color? backgroundColor = decoration.backgroundColor.value;
+        debugPrint("Decoration color: $backgroundColor in ${element.id}");
         current = DecoratedBox(
           decoration: BoxDecoration(
-            color: decoration.backgroundColor.value,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(decoration.radius.value),
             border: decoration.borderColor.value == null
                 ? null
@@ -206,7 +216,7 @@ extension WidgetExtension on UIElement {
 
   BoxDecoration _wireframeEmptyDecoration() {
     return BoxDecoration(
-      color: Colors.white,
+      color: Colors.transparent,
       border: Border.all(color: Colors.blue, width: 0.5),
     );
   }

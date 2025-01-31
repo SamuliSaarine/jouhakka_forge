@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 
 class UIPage extends ElementRoot {
   /// The background color of the page as a hex value.s
-  int backgroundHex;
+  Color backgroundColor;
 
   /// [UIPage] is [ElementRoot] that scales to the size of the screen and one can navigate to.
   /// One layer can have only one [UIPage].
   UIPage(
-      {required super.title, this.backgroundHex = 0xFFFFFFFF, UIElement? body})
+      {required super.title,
+      this.backgroundColor = Colors.white,
+      UIElement? body})
       : super(
           id: IDService.newID('pg'),
         ) {
-    super.body = body ?? UIElement(root: this, parent: null);
+    super.body = body ?? UIElement(root: this, parent: null)
+      ..decoration.value = ElementDecoration(backgroundColor: backgroundColor)
+      ..width.fixed(Session.currentResolution.value.width)
+      ..height.fixed(Session.currentResolution.value.height);
   }
 
   factory UIPage.empty() {
@@ -22,7 +28,11 @@ class UIPage extends ElementRoot {
   }
 
   Widget asWidget() {
-    return ElementWidget(element: body, globalKey: GlobalKey());
+    return ElementWidget(
+      element: body,
+      globalKey: GlobalKey(),
+      canApplyInfinity: false,
+    );
   }
 
   @override

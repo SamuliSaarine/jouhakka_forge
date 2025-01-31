@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/ui_element.dart';
@@ -8,7 +10,11 @@ import 'package:jouhakka_forge/3_components/layout/canvas.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/3_components/element/element_builder_interface.dart';
 import 'package:jouhakka_forge/3_components/layout/floating_bar.dart';
+import 'package:jouhakka_forge/3_components/layout/gap.dart';
+import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
+import 'package:jouhakka_forge/3_components/text_field.dart';
 import 'package:jouhakka_forge/4_views/inspector_view.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
 
 class PageDesignView extends StatefulWidget {
   final UIPage page;
@@ -19,26 +25,44 @@ class PageDesignView extends StatefulWidget {
 }
 
 class _PageDesignViewState extends State<PageDesignView> {
-  bool _holdContainerEditor = false;
-  bool _toggleContainerEditor = false;
+  late HoldOrToggle _containerEditorController;
   DateTime? _lastTimeShiftDown;
 
-  Resolution _resolution = Resolution.iphone13;
+  Resolution get resolution => Session.currentResolution.value;
+
   UIElement get body => widget.page.body;
 
   late FocusNode focusNode;
+
+  late TextEditingController _widthController;
+  late TextEditingController _heightController;
 
   @override
   void initState() {
     super.initState();
     focusNode = FocusNode();
     focusNode.requestFocus();
-    widget.page.body = UIElement(root: widget.page, parent: null)
-      ..width.fixed(_resolution.width)
-      ..height.fixed(_resolution.height)
-      ..decoration.value =
-          ElementDecoration(backgroundColor: Color(widget.page.backgroundHex));
+    _containerEditorController = HoldOrToggle(false);
+    widget.page.body
+      ..width.fixed(resolution.width)
+      ..height.fixed(resolution.height);
+
+    _widthController = TextEditingController(text: resolution.width.toString());
+    _heightController =
+        TextEditingController(text: resolution.height.toString());
     Session.selectedElement.value = widget.page.body;
+  }
+
+  @override
+  void didUpdateWidget(covariant PageDesignView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    focusNode.requestFocus();
+    if (oldWidget.page != widget.page) {
+      widget.page.body
+        ..width.fixed(resolution.width)
+        ..height.fixed(resolution.height);
+      Session.selectedElement.value = widget.page.body;
+    }
   }
 
   @override
@@ -52,19 +76,13 @@ class _PageDesignViewState extends State<PageDesignView> {
             if (_lastTimeShiftDown != null &&
                 DateTime.now().difference(_lastTimeShiftDown!) <
                     const Duration(milliseconds: 500)) {
-              setState(() {
-                _toggleContainerEditor = !_toggleContainerEditor;
-              });
+              _containerEditorController.toggle();
             } else {
-              setState(() {
-                _holdContainerEditor = true;
-              });
+              _containerEditorController.hold();
             }
             _lastTimeShiftDown = DateTime.now();
           } else if (event is KeyUpEvent) {
-            setState(() {
-              _holdContainerEditor = false;
-            });
+            _containerEditorController.release();
           }
         }
       },
@@ -86,23 +104,27 @@ class _PageDesignViewState extends State<PageDesignView> {
   }
 
   Widget _canvas() {
-    Resolution res = body.getResolution() ?? _resolution;
+    Resolution res = body.getResolution() ?? resolution;
     return InteractiveCanvas(
       resolution: res,
       padding: res.height * 0.16,
       child: RepaintBoundary(
-        child: ElementBuilderInterface(
-          globalKey: GlobalKey(),
-          element: widget.page.body,
-          root: widget.page,
-          showContainerEditor: _toggleContainerEditor ^ _holdContainerEditor,
-          onBodyChanged: (element, _) {
-            debugPrint("Body changed");
-            setState(() {
-              widget.page.body = element;
-            });
-          },
-        ),
+        child: ChangeListener(
+            source: _containerEditorController,
+            builder: () {
+              return ElementBuilderInterface(
+                globalKey: GlobalKey(),
+                element: widget.page.body,
+                root: widget.page,
+                showContainerEditor: _containerEditorController.xor,
+                onBodyChanged: (element, _) {
+                  debugPrint("Body changed");
+                  setState(() {
+                    widget.page.body = element;
+                  });
+                },
+              );
+            }),
       ),
     );
   }
@@ -124,21 +146,21 @@ class _PageDesignViewState extends State<PageDesignView> {
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24.0, left: 40.0),
         child: FloatingBar(
-          backgroundColor: const Color.fromARGB(255, 41, 53, 59),
-          borderRadius: 20,
           children: [
-            MyIconButton(
-              icon: Icons.dashboard_customize_outlined,
-              tooltip:
-                  "Toggle container editor (Hold shift to hold editor, double tap to toggle)",
-              decoration: decoration,
-              isSelected: _toggleContainerEditor ^ _holdContainerEditor,
-              primaryAction: (_) {
-                setState(() {
-                  _toggleContainerEditor = !_toggleContainerEditor;
-                });
-              },
-            )
+            ChangeListener(
+                source: _containerEditorController,
+                builder: () {
+                  return MyIconButton(
+                    icon: Icons.dashboard_customize_outlined,
+                    tooltip:
+                        "Toggle container editor (Hold shift to hold editor, double tap to toggle)",
+                    decoration: decoration,
+                    isSelected: _containerEditorController.xor,
+                    primaryAction: (_) {
+                      _containerEditorController.toggle();
+                    },
+                  );
+                })
           ],
         ),
       ),
@@ -157,32 +179,53 @@ class _PageDesignViewState extends State<PageDesignView> {
       borderRadius: 0,
       size: 24,
     );
+    if (_widthController.text != resolution.width.toString()) {
+      _widthController.text = "${body.width.value ?? resolution.width}";
+    }
+    if (_heightController.text != resolution.height.toString()) {
+      _heightController.text = "${body.height.value ?? resolution.height}";
+    }
     return Align(
       alignment: Alignment.bottomRight,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24.0, right: 24.0),
         child: FloatingBar(
-          backgroundColor: const Color.fromARGB(255, 41, 53, 59),
-          borderRadius: 12,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
+              padding: const EdgeInsets.only(left: 8.0, right: 4.0),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    (body.width.value ?? _resolution.width).toString(),
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white),
+                  const Text("W: ", style: TextStyle(color: Colors.white)),
+                  SizedBox(
+                    width: 52,
+                    child: MyNumberField<int>(
+                      controller: _widthController,
+                      hintText: "Width",
+                      textColor: MyColors.light,
+                      onChanged: (value) {
+                        if (value < 10) return;
+
+                        _updateResolution(Resolution(
+                            width: value.toDouble(),
+                            height: resolution.height));
+                      },
+                    ),
                   ),
-                  Text(
-                    (body.height.value ?? _resolution.height).toString(),
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white),
+                  Gap.w8,
+                  const Text("H: ", style: TextStyle(color: Colors.white)),
+                  SizedBox(
+                    width: 52,
+                    child: MyNumberField<int>(
+                      controller: _heightController,
+                      hintText: "Height",
+                      textColor: MyColors.light,
+                      onChanged: (value) {
+                        if (value < 10) return;
+                        _updateResolution(Resolution(
+                            width: resolution.width, height: value.toDouble()));
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -190,7 +233,7 @@ class _PageDesignViewState extends State<PageDesignView> {
             MyIconButton(
               icon: Icons.desktop_windows_outlined,
               decoration: decoration,
-              isSelected: _resolution == Resolution.fullHD,
+              isSelected: resolution == Resolution.fullHD,
               primaryAction: (_) {
                 _updateResolution(Resolution.fullHD);
               },
@@ -198,7 +241,7 @@ class _PageDesignViewState extends State<PageDesignView> {
             MyIconButton(
               icon: Icons.tablet_mac_outlined,
               decoration: decoration,
-              isSelected: _resolution == Resolution.ipad10,
+              isSelected: resolution == Resolution.ipad10,
               primaryAction: (_) {
                 _updateResolution(Resolution.ipad10);
               },
@@ -206,7 +249,7 @@ class _PageDesignViewState extends State<PageDesignView> {
             MyIconButton(
               icon: Icons.phone_android_outlined,
               decoration: decoration,
-              isSelected: _resolution == Resolution.iphone13,
+              isSelected: resolution == Resolution.iphone13,
               primaryAction: (_) {
                 _updateResolution(Resolution.iphone13);
               },
@@ -222,7 +265,7 @@ class _PageDesignViewState extends State<PageDesignView> {
     body.width.value = resolution.width;
     body.height.value = resolution.height;
     setState(() {
-      _resolution = resolution;
+      Session.currentResolution.value = resolution;
     });
   }
 }

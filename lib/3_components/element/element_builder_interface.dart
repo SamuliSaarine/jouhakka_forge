@@ -183,78 +183,109 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       element: element,
       globalKey: globalKey,
       wireframe: true,
+      canApplyInfinity: !widget.showContainerEditor &&
+          element.parent != null &&
+          (element.parent! is! ContainerElement ||
+              (element.parent! as ContainerElement).type
+                  is SingleChildElementType),
       overrideContent: contentOverride,
       overridePadding: contentOverride != null &&
           element.padding.hasValue &&
           widget.showContainerEditor,
     );
-
+    double? fixedWidth = element.width.tryGetFixed();
+    double? fixedHeight = element.height.tryGetFixed();
+    debugPrint(
+        "${element.id} Fixed width: $fixedWidth, Fixed height: $fixedHeight");
     return SizedBox(
-      width: element.width.tryGetFixed(),
-      height: element.height.tryGetFixed(),
-      child: MouseRegion(
-        onEnter: (details) async {
-          if (Session.hoverLocked) return;
-          Session.hoveredElement.value = widget.element;
-        },
-        onExit: (_) {
-          if (Session.hoverLocked) return;
-          if (Session.hoveredElement.value == widget.element) {
-            Session.hoveredElement.value = null;
-          }
-        },
-        onHover: (_) {
-          if (Session.hoverLocked) return;
-          if (Session.hoveredElement.value != null) return;
-          Session.hoveredElement.value = widget.element;
-        },
-        hitTestBehavior: HitTestBehavior.opaque,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            Session.selectedElement.value = widget.element;
+      width: fixedWidth,
+      height: fixedHeight,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.blue.withOpacity(0.5), width: 1),
+        ),
+        child: MouseRegion(
+          onEnter: (details) async {
+            if (Session.hoverLocked) return;
+            Session.hoveredElement.value = widget.element;
           },
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              current,
-              ValueListener(
-                source: Session.hoveredElement,
-                condition: (value) {
-                  return _isHovering != (value == widget.element);
-                },
-                builder: (hoveringElement) {
-                  _isHovering = hoveringElement == widget.element;
-                  return ValueListener(
-                    source: Session.selectedElement,
-                    condition: (value) {
-                      return _isSelected != (value == widget.element);
-                    },
-                    builder: (selectedElement) {
-                      _isSelected = selectedElement == widget.element;
-                      bool showEditor = _isSelected || _isHovering;
-                      return Stack(
-                        children: showEditor
-                            ? [
-                                ..._elementInterface(contentOverride == null),
-                                Positioned.fill(
-                                  child: IgnorePointer(
-                                      child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.green, width: 1),
-                                    ),
-                                  )),
-                                ),
-                                if (widget.scaleAlignment != null) _scaleBox(),
-                              ]
-                            : [],
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
+          onExit: (_) {
+            if (Session.hoverLocked) return;
+            if (Session.hoveredElement.value == widget.element) {
+              Session.hoveredElement.value = null;
+            }
+          },
+          onHover: (_) {
+            if (Session.hoverLocked) return;
+            if (Session.hoveredElement.value != null) return;
+            Session.hoveredElement.value = widget.element;
+          },
+          hitTestBehavior: HitTestBehavior.opaque,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              Session.selectedElement.value = widget.element;
+            },
+            child: LayoutBuilder(builder: (context, constraints) {
+              debugPrint(
+                  "Element ${element.id} constraints: ${constraints.maxWidth}x${constraints.maxHeight}");
+              return Stack(
+                clipBehavior: Clip.none,
+                fit: StackFit.loose,
+                children: [
+                  if (element is! ContainerElement)
+                    const Positioned.fill(child: ColoredBox(color: Colors.red)),
+                  ColoredBox(
+                      color: Colors.blue.withOpacity(0.5), child: current),
+                  Positioned.fill(
+                    child: SizedBox(
+                      width: element.width.value,
+                      height: element.height.value,
+                      child: ValueListener(
+                        source: Session.hoveredElement,
+                        condition: (value) {
+                          return _isHovering != (value == widget.element);
+                        },
+                        builder: (hoveringElement) {
+                          _isHovering = hoveringElement == widget.element;
+                          return ValueListener(
+                            source: Session.selectedElement,
+                            condition: (value) {
+                              return _isSelected != (value == widget.element);
+                            },
+                            builder: (selectedElement) {
+                              _isSelected = selectedElement == widget.element;
+                              bool showEditor = _isSelected || _isHovering;
+                              return Stack(
+                                fit: StackFit.loose,
+                                children: showEditor
+                                    ? [
+                                        ..._elementInterface(
+                                            contentOverride == null),
+                                        SizedBox.expand(
+                                          child: IgnorePointer(
+                                              child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                  color: Colors.green,
+                                                  width: 1),
+                                            ),
+                                          )),
+                                        ),
+                                        if (widget.scaleAlignment != null)
+                                          _scaleBox(),
+                                      ]
+                                    : [],
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
           ),
         ),
       ),
@@ -265,7 +296,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
   List<Widget> _elementInterface(bool showPrimary) {
     if (!showPrimary) return [];
-    bool isMedia = element is TextElement || element is ImageElement;
+    bool isMedia = element is TextElement ||
+        element is ImageElement ||
+        element is IconElement;
 
     return [
       LayoutBuilder(builder: (context, constraints) {
@@ -349,7 +382,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           clickPosition: details.globalPosition,
           child: ElementPicker(
               root: widget.root ?? widget.element!.root,
-              parent: widget.element?.parent,
+              parent: widget.element,
               onElementSelected: (element) {
                 onAddChild(element);
                 ContextPopup.close();
@@ -408,6 +441,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     Alignment alignment = widget.scaleAlignment!;
     double size = fastSqrt(min(widget.element!.width.value ?? 400,
         widget.element!.height.value ?? 400));
+    //debugPrint("Size: $size | ${alignment.ratio}");
     return Align(
       alignment: alignment,
       child: MouseRegion(
@@ -458,8 +492,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           },
           child: Container(
             color: Colors.blue,
-            height: size,
-            width: size,
+            height: size * alignment.ratio,
+            width: size / alignment.ratio,
           ),
         ),
       ),

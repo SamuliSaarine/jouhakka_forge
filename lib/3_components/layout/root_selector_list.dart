@@ -2,9 +2,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/component.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
+import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
 class RootSelectorPanel<T extends ElementRoot> extends StatefulWidget {
   final ElementRootFolder<T> rootFolder;
@@ -33,7 +35,7 @@ class _RootSelectorPanelState<T extends ElementRoot>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -51,20 +53,32 @@ class _RootSelectorPanelState<T extends ElementRoot>
                   },
                 ),
                 MyIconButton(
-                    icon: Icons.create_new_folder_outlined,
-                    primaryAction: (_) {
-                      widget.rootFolder.addNewFolder("New Folder");
-                      setState(() {});
-                    }),
+                  icon: Icons.create_new_folder_outlined,
+                  primaryAction: (_) {
+                    widget.rootFolder.addNewFolder("New Folder");
+                    setState(() {});
+                  },
+                ),
               ],
             ),
           ),
-          const Divider(indent: 0, endIndent: 0),
+          const Divider(
+            indent: 0,
+            endIndent: 0,
+            thickness: 1,
+            height: 1,
+          ),
           Expanded(
             child: SingleChildScrollView(
-              child: RootSelectorList<T>(
-                widget.rootFolder,
-                onSelection: widget.onSelection,
+              child: ValueListener(
+                source: T == UIPage ? Session.lastPage : Session.lastComponent,
+                builder: (lastRoot) {
+                  return RootSelectorList<T>(
+                    widget.rootFolder,
+                    selectedRoot: lastRoot as T?,
+                    onSelection: widget.onSelection,
+                  );
+                },
               ),
             ),
           ),
@@ -76,9 +90,11 @@ class _RootSelectorPanelState<T extends ElementRoot>
 
 class RootSelectorList<T extends ElementRoot> extends StatefulWidget {
   final ElementRootFolder<T> folder;
+  final T? selectedRoot;
   final void Function(T item) onSelection;
 
-  const RootSelectorList(this.folder, {super.key, required this.onSelection});
+  const RootSelectorList(this.folder,
+      {super.key, required this.onSelection, this.selectedRoot});
 
   @override
   State<RootSelectorList> createState() => _RootSelectorListState<T>();
@@ -198,6 +214,7 @@ class _RootSelectorListState<T extends ElementRoot>
   }
 
   Widget _itemWidget(T item, int index) {
+    //bool isSelected = item is UIPage ? item == Session.lastPage : item == Session.lastComponent;
     return ClickDetector(
       primaryAction: () {
         widget.onSelection(item);
@@ -215,7 +232,9 @@ class _RootSelectorListState<T extends ElementRoot>
         }
       },
       child: ColoredBox(
-        color: hovering == index ? Colors.grey[200]! : Colors.transparent,
+        color: (hovering == index || item == widget.selectedRoot)
+            ? Colors.grey[200]!
+            : Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Text(item.title),

@@ -82,3 +82,33 @@ class ImageElement extends UIElement {
   @override
   String get label => "Image";
 }
+
+class IconElement extends UIElement {
+  IconData icon;
+  Color color;
+
+  /// [IconElement] is a [UIElement] that displays an icon.
+  IconElement({
+    this.icon = Icons.change_history,
+    this.color = Colors.black,
+    required super.root,
+    super.parent,
+    double? size = 24,
+  }) {
+    if (size != null) {
+      width.fixed(size);
+      height.fixed(size);
+    }
+  }
+
+  @override
+  Widget getContent() {
+    return Icon(
+      icon,
+      color: color,
+    );
+  }
+
+  @override
+  String get label => "Icon";
+}
