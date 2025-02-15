@@ -78,3 +78,63 @@ class _MyNumberFieldState<T extends num> extends State<MyNumberField<T>> {
     );
   }
 }
+
+class MyTextField extends StatefulWidget {
+  static const BorderRadius _radius = BorderRadius.all(Radius.circular(8));
+
+  final TextEditingController controller;
+  final String? hintText;
+  final void Function(String value) onChanged;
+  final Color? textColor;
+  const MyTextField({
+    super.key,
+    required this.controller,
+    this.hintText,
+    this.textColor,
+    required this.onChanged,
+  });
+
+  @override
+  State<MyTextField> createState() => _MyTextFieldState();
+}
+
+class _MyTextFieldState extends State<MyTextField> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onHover: (event) {
+        if (!_isHovering) {
+          setState(() => _isHovering = true);
+        }
+      },
+      onExit: (_) => setState(() => _isHovering = false),
+      child: TextField(
+        controller: widget.controller,
+        decoration: InputDecoration(
+          hintText: widget.hintText,
+          contentPadding: const EdgeInsets.all(8),
+          isDense: true,
+          filled: true,
+          fillColor: MyColors.mildDifference,
+          enabledBorder: OutlineInputBorder(
+            borderSide: _isHovering
+                ? const BorderSide(color: MyColors.lighterCharcoal, width: 1.5)
+                : BorderSide.none,
+            borderRadius: MyTextField._radius,
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: MyColors.lighterBlue, width: 2),
+            borderRadius: MyTextField._radius,
+          ),
+        ),
+        onChanged: widget.onChanged,
+        style:
+            TextStyle(color: widget.textColor ?? MyColors.dark, fontSize: 14),
+        cursorColor: MyColors.dark,
+      ),
+    );
+  }
+}

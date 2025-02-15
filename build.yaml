@@ -1,0 +1,21 @@
+# build.yaml
+targets:
+  $default:
+    builders:
+      # Your custom builder configuration
+      jouhakka_forge|notifier_builder:
+        enabled: true
+        generate_for:
+          include:
+            - lib/**/*.dart # Process all Dart files in the lib folder
+
+# Define the builder
+builders:
+  notifier_builder:
+    target: ":jouhakka_forge" # Target this project
+    import: "package:jouhakka_forge/1_helpers/build/builder.dart" # Path to your builder
+    builder_factories: ["notifierBuilder"] # Factory function name
+    build_extensions: { ".dart": ["notifier.g.part"] } # Output file extension
+    auto_apply: dependents # Apply to dependent packages
+    build_to: cache # Output to the build cache
+    applies_builders: ["source_gen|combining_builder"] # Apply the combining builder

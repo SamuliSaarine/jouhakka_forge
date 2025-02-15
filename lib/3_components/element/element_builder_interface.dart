@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/0_models/media_elements.dart';
+import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/1_helpers/functions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
@@ -10,11 +10,12 @@ import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
-import 'package:jouhakka_forge/0_models/container_element.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/container_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
+//TODO: App freezes when nested singleChildContainers have auto size and shift is pressed
 class ElementBuilderInterface extends StatefulWidget {
   final void Function(UIElement element, int index) onBodyChanged;
 
@@ -97,6 +98,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       _lastHeightType = element.height.type;
       widget.onBodyChanged(element, widget.index);
     } else {
+      //debugPrint("Setting state on change");
       setState(() {});
     }
   }
@@ -129,16 +131,39 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
       contentOverride = ContainerChildEditor.from(
         containerElement,
-        isHovering: widget.showContainerEditor,
-        onAddChild: (direction) {
+        show: widget.showContainerEditor,
+        onAddChild: (direction, {TapUpDetails? details}) async {
+          UIElement? pickedElement;
+          if (details != null) {
+            ContextPopup.open(
+              context,
+              clickPosition: details.globalPosition,
+              child: ElementPicker(
+                root: containerElement.root,
+                parent: containerElement,
+                onElementSelected: (element) {
+                  pickedElement = element;
+                  ContextPopup.close();
+                },
+              ),
+            );
+
+            await ContextPopup.waitOnClose();
+
+            if (pickedElement == null) return;
+          }
+
           debugPrint("${(widget.element as ContainerElement).children.length}");
           if (containerElement.type is SingleChildElementType) {
             containerElement
                 .changeContainerType(FlexElementType(direction.axis));
           }
           containerElement.addChild(
-            UIElement.defaultBox(containerElement.root,
-                parent: containerElement),
+            pickedElement ??
+                (containerElement.children.isEmpty
+                    ? UIElement.defaultBox(containerElement.root,
+                        parent: containerElement)
+                    : containerElement.children.last.clone()),
           );
 
           debugPrint("${(widget.element as ContainerElement).children.length}");
@@ -147,6 +172,10 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           });
         },
         builder: (child, index) {
+          if (childKeys.length <= index) {
+            childKeys.add(GlobalKey());
+            debugPrint("Key was not initialized properly");
+          }
           Widget interface = ElementBuilderInterface(
             globalKey: childKeys[index], // ValueKey("${child.hashCode}_i"),
             element: child,
@@ -155,10 +184,10 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
             scaleAlignment: childScaleAlignment,
             showContainerEditor: widget.showContainerEditor,
             onBodyChanged: (element, index) {
-              if (containerElement.children[index] != element) {
+              UIElement childElement = containerElement.children[index];
+              if (childElement != element) {
                 containerElement.children[index] = element;
               }
-
               setState(() {});
             },
           );
@@ -167,8 +196,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           Axis direction = isFlex
               ? (containerElement.type as FlexElementType).direction
               : Axis.vertical;
-          if (child.expands(axis: direction) &&
-              (isFlex || widget.showContainerEditor)) {
+          if (child.expands(axis: direction) && isFlex) {
             return Expanded(
               child: interface,
             );
@@ -193,99 +221,83 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           element.padding.hasValue &&
           widget.showContainerEditor,
     );
-    double? fixedWidth = element.width.tryGetFixed();
-    double? fixedHeight = element.height.tryGetFixed();
-    debugPrint(
-        "${element.id} Fixed width: $fixedWidth, Fixed height: $fixedHeight");
+
     return SizedBox(
-      width: fixedWidth,
-      height: fixedHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.blue.withOpacity(0.5), width: 1),
-        ),
-        child: MouseRegion(
-          onEnter: (details) async {
-            if (Session.hoverLocked) return;
-            Session.hoveredElement.value = widget.element;
+      width: element.width.tryGetFixed(),
+      height: element.height.tryGetFixed(),
+      child: MouseRegion(
+        onEnter: (details) async {
+          if (Session.hoverLocked) return;
+          Session.hoveredElement.value = widget.element;
+        },
+        onExit: (_) {
+          if (Session.hoverLocked) return;
+          if (Session.hoveredElement.value == widget.element) {
+            Session.hoveredElement.value = null;
+          }
+        },
+        onHover: (_) {
+          if (Session.hoverLocked) return;
+          if (Session.hoveredElement.value != null) return;
+          Session.hoveredElement.value = widget.element;
+        },
+        hitTestBehavior: HitTestBehavior.opaque,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            Session.selectedElement.value = widget.element;
           },
-          onExit: (_) {
-            if (Session.hoverLocked) return;
-            if (Session.hoveredElement.value == widget.element) {
-              Session.hoveredElement.value = null;
-            }
-          },
-          onHover: (_) {
-            if (Session.hoverLocked) return;
-            if (Session.hoveredElement.value != null) return;
-            Session.hoveredElement.value = widget.element;
-          },
-          hitTestBehavior: HitTestBehavior.opaque,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              Session.selectedElement.value = widget.element;
-            },
-            child: LayoutBuilder(builder: (context, constraints) {
-              debugPrint(
-                  "Element ${element.id} constraints: ${constraints.maxWidth}x${constraints.maxHeight}");
-              return Stack(
-                clipBehavior: Clip.none,
-                fit: StackFit.loose,
-                children: [
-                  if (element is! ContainerElement)
-                    const Positioned.fill(child: ColoredBox(color: Colors.red)),
-                  ColoredBox(
-                      color: Colors.blue.withOpacity(0.5), child: current),
-                  Positioned.fill(
-                    child: SizedBox(
-                      width: element.width.value,
-                      height: element.height.value,
-                      child: ValueListener(
-                        source: Session.hoveredElement,
+          child: Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.loose,
+            children: [
+              current,
+              Positioned.fill(
+                child: SizedBox(
+                  width: element.width.value,
+                  height: element.height.value,
+                  child: ValueListener(
+                    source: Session.hoveredElement,
+                    condition: (value) {
+                      return _isHovering != (value == widget.element);
+                    },
+                    builder: (hoveringElement) {
+                      _isHovering = hoveringElement == widget.element;
+                      return ValueListener(
+                        source: Session.selectedElement,
                         condition: (value) {
-                          return _isHovering != (value == widget.element);
+                          return _isSelected != (value == widget.element);
                         },
-                        builder: (hoveringElement) {
-                          _isHovering = hoveringElement == widget.element;
-                          return ValueListener(
-                            source: Session.selectedElement,
-                            condition: (value) {
-                              return _isSelected != (value == widget.element);
-                            },
-                            builder: (selectedElement) {
-                              _isSelected = selectedElement == widget.element;
-                              bool showEditor = _isSelected || _isHovering;
-                              return Stack(
-                                fit: StackFit.loose,
-                                children: showEditor
-                                    ? [
-                                        ..._elementInterface(
-                                            contentOverride == null),
-                                        SizedBox.expand(
-                                          child: IgnorePointer(
-                                              child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                  color: Colors.green,
-                                                  width: 1),
-                                            ),
-                                          )),
+                        builder: (selectedElement) {
+                          _isSelected = selectedElement == widget.element;
+                          bool showEditor = _isSelected || _isHovering;
+                          return Stack(
+                            fit: StackFit.loose,
+                            children: showEditor
+                                ? [
+                                    ..._elementInterface(
+                                        contentOverride == null),
+                                    SizedBox.expand(
+                                      child: IgnorePointer(
+                                          child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                              color: Colors.green, width: 1),
                                         ),
-                                        if (widget.scaleAlignment != null)
-                                          _scaleBox(),
-                                      ]
-                                    : [],
-                              );
-                            },
+                                      )),
+                                    ),
+                                    if (widget.scaleAlignment != null)
+                                      _scaleBox(),
+                                  ]
+                                : [],
                           );
                         },
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                ],
-              );
-            }),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -358,7 +370,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
       return Center(
         child: Container(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withValues(alpha: 0.8),
           width: maxWidth,
           padding: EdgeInsets.all(padding),
           child: Wrap(
@@ -376,23 +388,24 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       icon: Icons.add_circle_outline,
       tooltip: "Add child",
       size: size,
-      primaryAction: (details) {
+      primaryAction: (_) {
+        onAddChild(
+          UIElement.defaultBox(widget.root ?? element.root,
+              parent: widget.element),
+        );
+      },
+      secondaryAction: (details) {
         ContextPopup.open(
           context,
           clickPosition: details.globalPosition,
           child: ElementPicker(
-              root: widget.root ?? widget.element!.root,
-              parent: widget.element,
-              onElementSelected: (element) {
-                onAddChild(element);
-                ContextPopup.close();
-              }),
-        );
-      },
-      secondaryAction: (_) {
-        onAddChild(
-          UIElement.defaultBox(widget.root ?? element.root,
-              parent: widget.element),
+            root: widget.root ?? widget.element!.root,
+            parent: widget.element,
+            onElementSelected: (element) {
+              onAddChild(element);
+              ContextPopup.close();
+            },
+          ),
         );
       },
     );

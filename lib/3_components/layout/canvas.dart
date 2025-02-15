@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
-import 'package:jouhakka_forge/2_services/session.dart';
 
 class InteractiveCanvas extends StatefulWidget {
   final Resolution resolution;
@@ -11,14 +10,17 @@ class InteractiveCanvas extends StatefulWidget {
   final double padding;
   final double minScale;
   final double maxScale;
+  final void Function()? onCanvasTap;
 
-  const InteractiveCanvas(
-      {super.key,
-      required this.resolution,
-      required this.child,
-      this.padding = 16,
-      this.minScale = 0.1,
-      this.maxScale = 20.0});
+  const InteractiveCanvas({
+    super.key,
+    required this.resolution,
+    required this.child,
+    this.padding = 16,
+    this.minScale = 0.1,
+    this.maxScale = 20.0,
+    this.onCanvasTap,
+  });
 
   @override
   State<InteractiveCanvas> createState() => _InteractiveCanvasState();
@@ -46,16 +48,18 @@ class _InteractiveCanvasState extends State<InteractiveCanvas> {
           transformationController: controller,
           minScale: 0.1,
           maxScale: 20.0,
-          scaleFactor: kDefaultMouseScrollToScaleFactor * 1.6,
+          scaleEnabled: true,
+          scaleFactor: kDefaultMouseScrollToScaleFactor,
           constrained: false,
           onInteractionUpdate: (details) {},
+          trackpadScrollCausesScale: false,
           child: SizedBox(
             width: size.width,
             height: size.height,
             child: GestureDetector(
               onTap: () {
                 debugPrint("Canvas Tapped");
-                Session.selectedElement.value = null;
+                widget.onCanvasTap?.call();
               },
               child: ColoredBox(
                 color: const Color.fromARGB(255, 194, 208, 207),

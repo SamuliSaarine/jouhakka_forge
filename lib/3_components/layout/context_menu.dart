@@ -32,7 +32,7 @@ class _ContextMenuState extends State<ContextMenu> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),

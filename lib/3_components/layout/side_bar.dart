@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/component.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/layout/root_selector_list.dart';
@@ -124,7 +123,6 @@ class _SideBarState extends State<SideBar> {
     panel = topMenu[0].panelBuilder();
   }
 
-  //TODO: Navigate between pages and other systems
   @override
   Widget build(BuildContext context) {
     return SizedBox(

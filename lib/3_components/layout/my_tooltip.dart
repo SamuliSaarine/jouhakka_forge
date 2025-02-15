@@ -42,11 +42,12 @@ class _MyTooltipState extends State<MyTooltip> {
         if (_isHovering && !_isShown) {
           _isShown = true;
           if (context.mounted) {
-            Offset? offset = _position + const Offset(10, -40);
+            Offset? offset = _position; //+ const Offset(10, -40);
             ContextPopup.open(
               context,
               clickPosition: offset,
               secondary: true,
+              preferBottom: false,
               child: _buildTooltip(),
             );
           }
@@ -55,7 +56,6 @@ class _MyTooltipState extends State<MyTooltip> {
       onHover: (event) => _position = event.position,
       onExit: (event) {
         _isHovering = false;
-        debugPrint("Closing tooltip");
         if (_isShown) {
           ContextPopup.closeSecondary();
           _isShown = false;

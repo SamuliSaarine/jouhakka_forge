@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/0_models/media_elements.dart';
+import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class UIElement extends ChangeNotifier {
   /// Every [UIElement] is part of an element tree, and every element tree has an [ElementRoot].
@@ -45,6 +46,11 @@ class UIElement extends ChangeNotifier {
     super.dispose();
     width.dispose();
     height.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
   }
 
   /// Expanding white box with black border and 8px padding.
@@ -92,6 +98,23 @@ class UIElement extends ChangeNotifier {
     }
   }
 
+  void copy(UIElement other) {
+    width.copy(other.width);
+    height.copy(other.height);
+    padding.value = other.padding.value;
+    decoration.value = other.decoration.value;
+  }
+
+  UIElement clone({ElementRoot? root, UIElement? parent}) {
+    UIElement copy =
+        UIElement(root: root ?? this.root, parent: parent ?? this.parent);
+    copy.width.copy(width);
+    copy.height.copy(height);
+    copy.padding.value = padding.value;
+    copy.decoration.value = decoration.value;
+    return copy;
+  }
+
   /// Get different types of [UIElement] from a [UIElementType].
   static UIElement fromType(
       UIElementType type, ElementRoot root, UIElement? parent) {
@@ -105,7 +128,7 @@ class UIElement extends ChangeNotifier {
       case UIElementType.image:
         return ImageElement(root: root, parent: parent);
       case UIElementType.icon:
-        return IconElement(root: root, parent: parent, icon: Icons.star);
+        return IconElement(root: root, parent: parent, icon: LucideIcons.star);
     }
   }
 
@@ -304,6 +327,7 @@ class AxisSize extends ChangeNotifier {
     _value = value;
     type = SizeType.fixed;
     notifyListeners();
+    double.infinity;
   }
 
   void add(double value) {

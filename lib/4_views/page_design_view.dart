@@ -1,8 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
@@ -20,6 +18,12 @@ class PageDesignView extends StatefulWidget {
   final UIPage page;
   const PageDesignView(this.page, {super.key});
 
+  static final Map<int, double> scrollStates = {};
+
+  void disposeScrollStates() {
+    scrollStates.clear();
+  }
+
   @override
   State<PageDesignView> createState() => _PageDesignViewState();
 }
@@ -27,12 +31,13 @@ class PageDesignView extends StatefulWidget {
 class _PageDesignViewState extends State<PageDesignView> {
   late HoldOrToggle _containerEditorController;
   DateTime? _lastTimeShiftDown;
+  late GlobalKey _bodyKey;
 
   Resolution get resolution => Session.currentResolution.value;
 
   UIElement get body => widget.page.body;
 
-  late FocusNode focusNode;
+  late FocusNode myNode;
 
   late TextEditingController _widthController;
   late TextEditingController _heightController;
@@ -40,8 +45,9 @@ class _PageDesignViewState extends State<PageDesignView> {
   @override
   void initState() {
     super.initState();
-    focusNode = FocusNode();
-    focusNode.requestFocus();
+    widget.disposeScrollStates();
+    myNode = FocusNode();
+    myNode.requestFocus();
     _containerEditorController = HoldOrToggle(false);
     widget.page.body
       ..width.fixed(resolution.width)
@@ -51,44 +57,72 @@ class _PageDesignViewState extends State<PageDesignView> {
     _heightController =
         TextEditingController(text: resolution.height.toString());
     Session.selectedElement.value = widget.page.body;
+
+    _bodyKey = GlobalKey();
   }
 
   @override
   void didUpdateWidget(covariant PageDesignView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    focusNode.requestFocus();
+    debugPrint("Widget updated");
+    myNode.requestFocus();
     if (oldWidget.page != widget.page) {
+      oldWidget.disposeScrollStates();
       widget.page.body
         ..width.fixed(resolution.width)
         ..height.fixed(resolution.height);
       Session.selectedElement.value = widget.page.body;
+      _bodyKey = GlobalKey();
     }
   }
 
   @override
+  void dispose() {
+    widget.disposeScrollStates();
+    myNode.dispose();
+    _widthController.dispose();
+    _heightController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: focusNode,
-      autofocus: true,
-      onKeyEvent: (event) {
-        if (event.logicalKey == LogicalKeyboardKey.shiftLeft) {
-          if (event is KeyDownEvent) {
-            if (_lastTimeShiftDown != null &&
-                DateTime.now().difference(_lastTimeShiftDown!) <
-                    const Duration(milliseconds: 500)) {
-              _containerEditorController.toggle();
-            } else {
-              _containerEditorController.hold();
-            }
-            _lastTimeShiftDown = DateTime.now();
-          } else if (event is KeyUpEvent) {
-            _containerEditorController.release();
-          }
-        }
-      },
-      child: Row(
-        children: [
-          Expanded(
+    return Row(
+      children: [
+        Expanded(
+          child: KeyboardListener(
+            focusNode: myNode,
+            autofocus: true,
+            onKeyEvent: (event) {
+              try {
+                if (event.logicalKey == LogicalKeyboardKey.shiftLeft) {
+                  if (event is KeyDownEvent) {
+                    debugPrint("Shift Down");
+                    if (_lastTimeShiftDown != null &&
+                        DateTime.now().difference(_lastTimeShiftDown!) <
+                            const Duration(milliseconds: 500)) {
+                      _containerEditorController.toggle();
+                    } else {
+                      _containerEditorController.hold();
+                    }
+                    _lastTimeShiftDown = DateTime.now();
+                  } else if (event is KeyUpEvent) {
+                    debugPrint("Shift Up");
+                    _containerEditorController.release();
+                  }
+                } else if (event.logicalKey == LogicalKeyboardKey.controlLeft) {
+                  if (event is KeyDownEvent) {
+                    Session.ctrlDown.value = true;
+                    debugPrint("Ctrl Down");
+                  } else if (event is KeyUpEvent) {
+                    Session.ctrlDown.value = false;
+                    debugPrint("Ctrl Up");
+                  }
+                }
+              } catch (e) {
+                debugPrint("Error in key event: $e");
+              }
+            },
             child: Stack(
               children: [
                 _canvas(),
@@ -97,36 +131,52 @@ class _PageDesignViewState extends State<PageDesignView> {
               ],
             ),
           ),
-          InspectorView(widget.page),
-        ],
-      ),
+        ),
+        InspectorView(widget.page),
+      ],
     );
   }
 
   Widget _canvas() {
-    Resolution res = body.getResolution() ?? resolution;
-    return InteractiveCanvas(
-      resolution: res,
-      padding: res.height * 0.16,
-      child: RepaintBoundary(
-        child: ChangeListener(
-            source: _containerEditorController,
-            builder: () {
-              return ElementBuilderInterface(
-                globalKey: GlobalKey(),
-                element: widget.page.body,
-                root: widget.page,
-                showContainerEditor: _containerEditorController.xor,
-                onBodyChanged: (element, _) {
-                  debugPrint("Body changed");
-                  setState(() {
-                    widget.page.body = element;
-                  });
-                },
-              );
-            }),
-      ),
-    );
+    try {
+      Resolution res = body.getResolution() ?? resolution;
+      return InteractiveCanvas(
+        resolution: res,
+        padding: res.height * 0.16,
+        onCanvasTap: () {
+          Session.selectedElement.value = null;
+          if (!myNode.hasPrimaryFocus) {
+            myNode.requestFocus();
+          }
+        },
+        child: RepaintBoundary(
+          child: ChangeListener(
+              source: _containerEditorController,
+              builder: () {
+                try {
+                  return ElementBuilderInterface(
+                    globalKey: _bodyKey,
+                    element: widget.page.body,
+                    root: widget.page,
+                    showContainerEditor: _containerEditorController.xor,
+                    onBodyChanged: (element, _) {
+                      debugPrint("Body changed");
+                      setState(() {
+                        widget.page.body = element;
+                      });
+                    },
+                  );
+                } catch (e) {
+                  debugPrint("Error in canvas: $e");
+                  return const ColoredBox(color: Colors.red);
+                }
+              }),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error in canvas: $e");
+      return const ColoredBox(color: Colors.red);
+    }
   }
 
   Widget _topLeftBar() {

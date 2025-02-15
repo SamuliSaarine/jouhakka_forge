@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_category_row.dart';
 
 class ElementPicker extends StatefulWidget {
@@ -78,7 +78,7 @@ class _ElementPickerState extends State<ElementPicker> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 spreadRadius: 1,
                 blurRadius: 2,
                 offset: const Offset(0, 1),

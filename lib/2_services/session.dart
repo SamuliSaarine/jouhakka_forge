@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/component.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/project.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 
 class Session {
@@ -25,4 +25,5 @@ class Session {
   static final ValueNotifier<MouseCursor> globalCursor =
       ValueNotifier(MouseCursor.defer);
   static bool hoverLocked = false;
+  static ValueNotifier<bool> ctrlDown = ValueNotifier(false);
 }

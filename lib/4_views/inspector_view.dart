@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/elements/container_element.dart';
+import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
-import 'package:jouhakka_forge/3_components/buttons/my_text_button.dart';
-import 'package:jouhakka_forge/3_components/layout/floating_bar.dart';
-import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 import 'package:jouhakka_forge/4_views/inspector_modules.dart';
 
@@ -13,8 +12,6 @@ class InspectorView extends StatelessWidget {
   const InspectorView(this.root, {super.key});
 
   //TODO: Make decoration editable
-  //TODO: Implement editor for container elements
-  //TODO: Implement editor for text elements
   //TODO: Implement editor for image elements
   @override
   Widget build(BuildContext context) {
@@ -25,7 +22,7 @@ class InspectorView extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 2,
             offset: const Offset(-1, 0),
@@ -46,22 +43,13 @@ class InspectorView extends StatelessWidget {
   }
 
   Widget _elementInspector(UIElement element) {
-    const MyTextButtonDecoration sizeTypeDecoration = MyTextButtonDecoration(
-      padding: 4,
-      borderRadius: 4,
-      backgroundColor: InteractiveColorSettings(
-        color: Colors.blueGrey,
-        hoverColor: Color.fromARGB(255, 66, 86, 96),
-        selectedColor: Color.fromARGB(255, 40, 53, 60),
-      ),
-    );
-
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(element.id),
         Text(element.label),
+        const Divider(),
         if (element.parent != null) ...[
           Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -72,7 +60,41 @@ class InspectorView extends StatelessWidget {
           ),
         ],
         if (element.parent == null)
-          const Text("Root element's size is fixed to resolution"),
+          const Center(
+            child: Text("Cannot edit size of root element"),
+          ),
+        const Divider(),
+        if (element is ContainerElement) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: element.type.getEditor(onScrollEnable: (axis) {
+              for (UIElement child in element.children) {
+                if (axis == Axis.horizontal &&
+                    child.width.type == SizeType.expand) {
+                  child.width.type = SizeType.fixed;
+                } else if (axis == Axis.vertical &&
+                    child.height.type == SizeType.expand) {
+                  child.height.type = SizeType.fixed;
+                }
+              }
+            }),
+          ),
+          const Divider(),
+        ],
+        if (element is TextElement) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: element.getEditor(),
+          ),
+          const Divider(),
+        ],
+        if (element is IconElement) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: element.getEditor(),
+          ),
+          const Divider(),
+        ],
       ],
     );
   }

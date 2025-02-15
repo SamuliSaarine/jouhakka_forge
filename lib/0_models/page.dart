@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/0_models/container_element.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/container_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 
 class ElementWidget extends StatefulWidget {
   final UIElement element;
@@ -40,13 +40,20 @@ class _ElementWidgetState extends State<ElementWidget> {
         final context = widget.globalKey.currentContext;
         if (context != null) {
           final size = context.size;
-          if (size != null) {
-            if (size.width != widget.element.width.value) {
-              widget.element.width.value = size.width;
-            }
-            if (size.height != widget.element.height.value) {
-              widget.element.height.value = size.height;
-            }
+          if (size != null && size.width != widget.element.width.value) {
+            widget.element.width.value = size.width;
+          }
+        }
+      });
+    }
+
+    if (widget.element.height.type != SizeType.fixed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final context = widget.globalKey.currentContext;
+        if (context != null) {
+          final size = context.size;
+          if (size != null && size.height != widget.element.height.value) {
+            widget.element.height.value = size.height;
           }
         }
       });
@@ -123,7 +130,6 @@ class _ElementWidgetState extends State<ElementWidget> {
     element.decoration.ifValue(
       (decoration) {
         Color? backgroundColor = decoration.backgroundColor.value;
-        debugPrint("Decoration color: $backgroundColor in ${element.id}");
         current = DecoratedBox(
           decoration: BoxDecoration(
             color: backgroundColor,

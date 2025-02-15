@@ -3,18 +3,19 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/1_helpers/functions.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
-import 'package:jouhakka_forge/0_models/container_element.dart';
-import 'package:jouhakka_forge/0_models/ui_element.dart';
+import 'package:jouhakka_forge/0_models/elements/container_element.dart';
+import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 
 class ContainerChildEditor extends StatelessWidget {
   final Widget elementWidget;
-  final bool isHovering;
-  final void Function(AddDirection direction)? onAddChild;
+  final bool show;
+  final void Function(AddDirection direction, {TapUpDetails? details})?
+      onAddChild;
 
   const ContainerChildEditor({
     super.key,
     required this.elementWidget,
-    this.isHovering = false,
+    this.show = false,
     this.onAddChild,
   });
 
@@ -25,15 +26,13 @@ class ContainerChildEditor extends StatelessWidget {
 
   factory ContainerChildEditor.from(
     ContainerElement element, {
-    bool isHovering = false,
-    void Function(AddDirection direction)? onAddChild,
+    required bool show,
+    void Function(AddDirection direction, {TapUpDetails? details})? onAddChild,
     required Widget Function(UIElement child, int index) builder,
   }) {
-    bool expandInner = false;
+    debugPrint("SingleChildEditor.build ${element.id}");
+
     Widget child(UIElement child, int index) {
-      if (child.expands(axis: Axis.vertical)) {
-        expandInner = true;
-      }
       return builder(child, index);
     }
 
@@ -44,30 +43,25 @@ class ContainerChildEditor extends StatelessWidget {
 
     if (element.type is FlexElementType) {
       Axis direction = (element.type as FlexElementType).direction;
-      bool axisExpands = direction == Axis.vertical
-          ? element.width.type == SizeType.expand
-          : element.height.type == SizeType.expand;
+      bool axisAutoSize = direction == Axis.vertical
+          ? element.height.type == SizeType.auto
+          : element.width.type == SizeType.auto;
 
       return FlexChildEditor(
         direction,
         key: ValueKey("${element.hashCode}_c"),
-        mainAxisSize: axisExpands ? MainAxisSize.max : MainAxisSize.min,
-        isHovering: isHovering,
+        autoSize: axisAutoSize,
+        show: show,
         elementWidget: element.type.getWidget(children),
         onAddChild: onAddChild,
       );
     } else if (element.type is SingleChildElementType) {
       return SingleChildEditor(
         key: ValueKey("${element.hashCode}_c"),
-        verticalAxisSize: element.height.type == SizeType.expand
-            ? MainAxisSize.max
-            : MainAxisSize.min,
-        horizontalAxisSize: element.width.type == SizeType.expand
-            ? MainAxisSize.max
-            : MainAxisSize.min,
-        isHovering: isHovering,
-        expandInner: expandInner,
-        elementWidget: children.first,
+        autoHeight: element.height.type == SizeType.auto,
+        autoWidth: element.width.type == SizeType.auto,
+        show: show,
+        elementWidget: element.type.getWidget(children),
         onAddChild: onAddChild,
       );
     }
@@ -90,8 +84,11 @@ class ContainerChildEditor extends StatelessWidget {
           ),
           borderRadius: buttonSize * 0.2,
         ),
-        primaryAction: (details) {
+        primaryAction: (_) {
           onAddChild?.call(direction);
+        },
+        secondaryAction: (details) {
+          onAddChild?.call(direction, details: details);
         },
       ),
     );
@@ -100,98 +97,142 @@ class ContainerChildEditor extends StatelessWidget {
 
 class FlexChildEditor extends ContainerChildEditor {
   final Axis direction;
-  final MainAxisSize mainAxisSize;
+  final bool autoSize;
 
   bool get isVertical => direction == Axis.vertical;
 
   const FlexChildEditor(
     this.direction, {
     super.key,
-    this.mainAxisSize = MainAxisSize.min,
-    super.isHovering,
+    required this.autoSize,
+    super.show,
     super.onAddChild,
     required super.elementWidget,
   });
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!isHovering) {
-          return elementWidget;
-        }
+    try {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          if (!show) {
+            return elementWidget;
+          }
 
-        double buttonSize =
-            fastSqrt(min(constraints.maxWidth, constraints.maxHeight)) * 2;
+          debugPrint("FlexChildEditor: $constraints");
 
-        return Flex(
-          mainAxisSize: mainAxisSize,
-          direction: direction,
-          children: [
-            button(
-                isVertical ? AddDirection.top : AddDirection.left, buttonSize),
-            Expanded(child: elementWidget),
-            button(isVertical ? AddDirection.bottom : AddDirection.right,
-                buttonSize),
-          ],
-        );
-      },
-    );
+          MainAxisSize mainAxisSize = autoSize &&
+                  (isVertical
+                      ? constraints.maxHeight.isInfinite
+                      : constraints.maxWidth.isInfinite)
+              ? MainAxisSize.min
+              : MainAxisSize.max;
+
+          double buttonSize =
+              fastSqrt(min(constraints.maxWidth, constraints.maxHeight));
+
+          Widget current = elementWidget;
+          if (mainAxisSize == MainAxisSize.max) {
+            current = Expanded(child: current);
+          }
+
+          return Flex(
+            mainAxisSize: mainAxisSize,
+            direction: direction,
+            children: [
+              button(
+                isVertical ? AddDirection.top : AddDirection.left,
+                buttonSize,
+              ),
+              current,
+              button(
+                isVertical ? AddDirection.bottom : AddDirection.right,
+                buttonSize,
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      debugPrint("FlexChildEditor.build error: $e");
+      rethrow;
+    }
   }
 }
 
 class SingleChildEditor extends ContainerChildEditor {
-  final MainAxisSize verticalAxisSize;
-  final MainAxisSize horizontalAxisSize;
-  final bool expandInner;
+  final bool autoWidth;
+  final bool autoHeight;
 
   const SingleChildEditor({
     super.key,
-    this.verticalAxisSize = MainAxisSize.min,
-    this.horizontalAxisSize = MainAxisSize.min,
-    super.isHovering = false,
+    required this.autoWidth,
+    required this.autoHeight,
+    super.show = false,
     super.onAddChild,
-    this.expandInner = true,
     required super.elementWidget,
   });
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!isHovering) {
-          return elementWidget;
-        }
+    try {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          if (!show) {
+            return elementWidget;
+          }
 
-        double buttonSize =
-            fastSqrt(min(constraints.maxWidth, constraints.maxHeight)) * 2;
+          double buttonSize =
+              fastSqrt(min(constraints.maxWidth, constraints.maxHeight));
 
-        Widget inner = Flex(
-          direction: Axis.horizontal,
-          mainAxisSize: horizontalAxisSize,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            button(AddDirection.left, buttonSize),
-            elementWidget,
-            button(AddDirection.right, buttonSize),
-          ],
-        );
+          Widget current = elementWidget;
 
-        if (expandInner) {
-          inner = Expanded(child: inner);
-        }
+          MainAxisSize horizontalAxisSize =
+              autoWidth && constraints.maxWidth.isInfinite
+                  ? MainAxisSize.min
+                  : MainAxisSize.max;
+          MainAxisSize verticalAxisSize =
+              autoHeight && constraints.maxHeight.isInfinite
+                  ? MainAxisSize.min
+                  : MainAxisSize.max;
 
-        return Flex(
-          direction: Axis.vertical,
-          mainAxisSize: verticalAxisSize,
-          children: [
-            button(AddDirection.top, buttonSize),
-            inner,
-            button(AddDirection.bottom, buttonSize),
-          ],
-        );
-      },
-    );
+          debugPrint(
+              "Horizontal: $horizontalAxisSize, Vertical: $verticalAxisSize");
+
+          if (horizontalAxisSize == MainAxisSize.max) {
+            current = Expanded(child: current);
+          }
+
+          current = Flex(
+            direction: Axis.horizontal,
+            mainAxisSize: horizontalAxisSize,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              button(AddDirection.left, buttonSize),
+              current,
+              button(AddDirection.right, buttonSize),
+            ],
+          );
+
+          if (verticalAxisSize == MainAxisSize.max) {
+            current = Expanded(child: current);
+          }
+
+          return Flex(
+            direction: Axis.vertical,
+            mainAxisSize: verticalAxisSize,
+            children: [
+              button(AddDirection.top, buttonSize),
+              current,
+              button(AddDirection.bottom, buttonSize),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      debugPrint("SingleChildEditor.build error: $e");
+      rethrow;
+    }
   }
 }
 

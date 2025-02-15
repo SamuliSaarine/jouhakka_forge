@@ -33,6 +33,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      restorationScopeId: 'main_restoration_scope',
       home: ValueListener(
         source: MyColors.darkMode,
         builder: (context) {
