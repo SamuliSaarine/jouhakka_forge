@@ -1,20 +1,20 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/1_helpers/functions.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 
+//TODO: In other branch, test different system where instead of buttons, you can add items by shift + click. Direction is determined by cursor position relative to the element.
 class ContainerChildEditor extends StatelessWidget {
   final Widget elementWidget;
   final bool show;
+  final double buttonSize;
   final void Function(AddDirection direction, {TapUpDetails? details})?
       onAddChild;
 
   const ContainerChildEditor({
     super.key,
     required this.elementWidget,
+    required this.buttonSize,
     this.show = false,
     this.onAddChild,
   });
@@ -27,6 +27,7 @@ class ContainerChildEditor extends StatelessWidget {
   factory ContainerChildEditor.from(
     ContainerElement element, {
     required bool show,
+    required double buttonSize,
     void Function(AddDirection direction, {TapUpDetails? details})? onAddChild,
     required Widget Function(UIElement child, int index) builder,
   }) {
@@ -52,6 +53,7 @@ class ContainerChildEditor extends StatelessWidget {
         key: ValueKey("${element.hashCode}_c"),
         autoSize: axisAutoSize,
         show: show,
+        buttonSize: buttonSize,
         elementWidget: element.type.getWidget(children),
         onAddChild: onAddChild,
       );
@@ -61,6 +63,7 @@ class ContainerChildEditor extends StatelessWidget {
         autoHeight: element.height.type == SizeType.auto,
         autoWidth: element.width.type == SizeType.auto,
         show: show,
+        buttonSize: buttonSize,
         elementWidget: element.type.getWidget(children),
         onAddChild: onAddChild,
       );
@@ -108,55 +111,37 @@ class FlexChildEditor extends ContainerChildEditor {
     super.show,
     super.onAddChild,
     required super.elementWidget,
+    required super.buttonSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    try {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          if (!show) {
-            return elementWidget;
-          }
-
-          debugPrint("FlexChildEditor: $constraints");
-
-          MainAxisSize mainAxisSize = autoSize &&
-                  (isVertical
-                      ? constraints.maxHeight.isInfinite
-                      : constraints.maxWidth.isInfinite)
-              ? MainAxisSize.min
-              : MainAxisSize.max;
-
-          double buttonSize =
-              fastSqrt(min(constraints.maxWidth, constraints.maxHeight));
-
-          Widget current = elementWidget;
-          if (mainAxisSize == MainAxisSize.max) {
-            current = Expanded(child: current);
-          }
-
-          return Flex(
-            mainAxisSize: mainAxisSize,
-            direction: direction,
-            children: [
-              button(
-                isVertical ? AddDirection.top : AddDirection.left,
-                buttonSize,
-              ),
-              current,
-              button(
-                isVertical ? AddDirection.bottom : AddDirection.right,
-                buttonSize,
-              ),
-            ],
-          );
-        },
-      );
-    } catch (e) {
-      debugPrint("FlexChildEditor.build error: $e");
-      rethrow;
+    if (!show) {
+      return elementWidget;
     }
+
+    MainAxisSize mainAxisSize = autoSize ? MainAxisSize.min : MainAxisSize.max;
+
+    Widget current = elementWidget;
+    if (mainAxisSize == MainAxisSize.max) {
+      current = Expanded(child: current);
+    }
+
+    return Flex(
+      mainAxisSize: mainAxisSize,
+      direction: direction,
+      children: [
+        button(
+          isVertical ? AddDirection.top : AddDirection.left,
+          buttonSize,
+        ),
+        current,
+        button(
+          isVertical ? AddDirection.bottom : AddDirection.right,
+          buttonSize,
+        ),
+      ],
+    );
   }
 }
 
@@ -171,68 +156,52 @@ class SingleChildEditor extends ContainerChildEditor {
     super.show = false,
     super.onAddChild,
     required super.elementWidget,
+    required super.buttonSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    try {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          if (!show) {
-            return elementWidget;
-          }
-
-          double buttonSize =
-              fastSqrt(min(constraints.maxWidth, constraints.maxHeight));
-
-          Widget current = elementWidget;
-
-          MainAxisSize horizontalAxisSize =
-              autoWidth && constraints.maxWidth.isInfinite
-                  ? MainAxisSize.min
-                  : MainAxisSize.max;
-          MainAxisSize verticalAxisSize =
-              autoHeight && constraints.maxHeight.isInfinite
-                  ? MainAxisSize.min
-                  : MainAxisSize.max;
-
-          debugPrint(
-              "Horizontal: $horizontalAxisSize, Vertical: $verticalAxisSize");
-
-          if (horizontalAxisSize == MainAxisSize.max) {
-            current = Expanded(child: current);
-          }
-
-          current = Flex(
-            direction: Axis.horizontal,
-            mainAxisSize: horizontalAxisSize,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              button(AddDirection.left, buttonSize),
-              current,
-              button(AddDirection.right, buttonSize),
-            ],
-          );
-
-          if (verticalAxisSize == MainAxisSize.max) {
-            current = Expanded(child: current);
-          }
-
-          return Flex(
-            direction: Axis.vertical,
-            mainAxisSize: verticalAxisSize,
-            children: [
-              button(AddDirection.top, buttonSize),
-              current,
-              button(AddDirection.bottom, buttonSize),
-            ],
-          );
-        },
-      );
-    } catch (e) {
-      debugPrint("SingleChildEditor.build error: $e");
-      rethrow;
+    if (!show) {
+      return elementWidget;
     }
+
+    Widget current = elementWidget;
+
+    MainAxisSize horizontalAxisSize =
+        autoWidth ? MainAxisSize.min : MainAxisSize.max;
+    MainAxisSize verticalAxisSize =
+        autoHeight ? MainAxisSize.min : MainAxisSize.max;
+
+    debugPrint("Horizontal: $horizontalAxisSize, Vertical: $verticalAxisSize");
+
+    if (horizontalAxisSize == MainAxisSize.max) {
+      current = Expanded(child: current);
+    }
+
+    current = Flex(
+      direction: Axis.horizontal,
+      mainAxisSize: horizontalAxisSize,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        button(AddDirection.left, buttonSize),
+        current,
+        button(AddDirection.right, buttonSize),
+      ],
+    );
+
+    if (verticalAxisSize == MainAxisSize.max) {
+      current = Expanded(child: current);
+    }
+
+    return Flex(
+      direction: Axis.vertical,
+      mainAxisSize: verticalAxisSize,
+      children: [
+        button(AddDirection.top, buttonSize),
+        current,
+        button(AddDirection.bottom, buttonSize),
+      ],
+    );
   }
 }
 

@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_category_row.dart';
 
 class ElementPicker extends StatefulWidget {
-  final Function(UIElement) onElementSelected;
-  final ElementRoot root;
-  final UIElement? parent;
-  const ElementPicker(
-      {super.key,
-      required this.onElementSelected,
-      required this.root,
-      this.parent});
+  final Function(UIElementType) onElementSelected;
+  const ElementPicker({
+    super.key,
+    required this.onElementSelected,
+  });
 
   @override
   State<ElementPicker> createState() => _ElementPickerState();
@@ -58,7 +53,7 @@ class _ElementPickerState extends State<ElementPicker> {
       if (item.shortcutActivator == null) continue;
       shortcuts[item.shortcutActivator!] = () {
         widget.onElementSelected(
-          UIElement.fromType(item.type, widget.root, widget.parent),
+          item.type,
         );
       };
     }
@@ -92,7 +87,7 @@ class _ElementPickerState extends State<ElementPicker> {
                 items: _categories[category]!,
                 onElementSelected: (type) {
                   widget.onElementSelected(
-                    UIElement.fromType(type, widget.root, widget.parent),
+                    type,
                   );
                 },
               ),

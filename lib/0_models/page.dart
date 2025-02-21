@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
+
+part 'page.g.dart';
 
 class UIPage extends ElementRoot {
   /// The background color of the page as a hex value.s
@@ -17,7 +20,7 @@ class UIPage extends ElementRoot {
       : super(
           id: IDService.newID('pg'),
         ) {
-    super.body = body ?? UIElement(root: this, parent: null)
+    _body = body?.clone(root: this) ?? UIElement(root: this, parent: null)
       ..decoration.value = ElementDecoration(backgroundColor: backgroundColor)
       ..width.fixed(Session.currentResolution.value.width)
       ..height.fixed(Session.currentResolution.value.height);
@@ -43,10 +46,12 @@ class UIPage extends ElementRoot {
 }
 
 /// Base class for models that can be the root of an element tree.
-abstract class ElementRoot {
+@notifier
+abstract class ElementRoot extends ChangeNotifier {
   final String id;
   String title;
-  late UIElement body;
+  @notify
+  late UIElement _body;
 
   Map<String, dynamic> variables = {};
 
@@ -56,6 +61,12 @@ abstract class ElementRoot {
 
   void removeVariable(String key) {
     variables.remove(key);
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _body.notifyListeners();
   }
 
   T getVariable<T>(String key) {
@@ -74,7 +85,7 @@ abstract class ElementRoot {
 
   ElementRoot({required this.id, required this.title, UIElement? body}) {
     if (body != null) {
-      this.body = body;
+      _body = body;
     }
   }
 

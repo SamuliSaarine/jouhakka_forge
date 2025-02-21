@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
+import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/4_views/page_design_view.dart';
 import '../../3_components/element/ui_element_component.dart';
 
@@ -11,6 +12,7 @@ part 'container_element.g.dart';
 class ContainerElement extends UIElement {
   /// List of [UIElement]s that are direct children of this container.
   final List<UIElement> children = [];
+  final ChangeNotifier childNotifier = ChangeNotifier();
 
   /// Specifies how the [ContainerElement] acts and is displayed.
   ContainerElementType _type;
@@ -44,23 +46,55 @@ class ContainerElement extends UIElement {
       child = child.clone(root: root, parent: this);
     }
 
-    if (type.scroll != null) {
+    /*if (type.scroll != null) {
       if (type.scroll == Axis.horizontal) {
         child.width.fixed(200);
       } else {
         child.height.fixed(200);
       }
-    }
+    }*/
     children.add(child);
+    childNotifier.notifyListeners();
   }
 
   void removeChild(UIElement child) {
+    if (Session.selectedElement.value == child) {
+      Session.selectedElement.value = null;
+    }
     children.remove(child);
+    if (children.length == 1 && type is! SingleChildElementType) {
+      type = SingleChildElementType();
+    } else if (children.isEmpty) {
+      _toRegularElement();
+      return;
+    }
+    childNotifier.notifyListeners();
+  }
+
+  void _toRegularElement() {
+    assert(children.isEmpty, "Container must be empty to convert to element");
+    UIElement newElement = UIElement(root: root, parent: parent)..copy(this);
+    if (parent != null) {
+      parent!.replaceAt(parent!.indexOf(this), newElement);
+    } else {
+      root.body = newElement;
+    }
   }
 
   void reorderChild(int oldIndex, int newIndex) {
     final UIElement child = children.removeAt(oldIndex);
     children.insert(newIndex, child);
+    childNotifier.notifyListeners();
+  }
+
+  int indexOf(UIElement element) => children.indexOf(element);
+
+  void replaceAt(int index, UIElement element) {
+    assert(index >= 0 && index < children.length, "Index out of bounds");
+    bool needsClone = element.parent != this || element.root != root;
+    children[index] =
+        needsClone ? element.clone(root: root, parent: this) : element;
+    childNotifier.notifyListeners();
   }
 
   void changeContainerType(ContainerElementType newType) {
@@ -71,9 +105,11 @@ class ContainerElement extends UIElement {
   /// Creates a [ContainerElement] from a [UIElement].
   ///
   /// Useful if you want to keep decoration or size settings from the original element.
-  factory ContainerElement.from(UIElement element,
-          {required ContainerElementType type,
-          required List<UIElement> children}) =>
+  factory ContainerElement.from(
+    UIElement element, {
+    required ContainerElementType type,
+    List<UIElement> children = const [],
+  }) =>
       ContainerElement(
           children: children,
           type: type,
@@ -109,7 +145,7 @@ class ContainerElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, UIElement? parent}) {
+  UIElement clone({ElementRoot? root, ContainerElement? parent}) {
     ContainerElement newElement = ContainerElement(
         root: root ?? this.root,
         parent: parent ?? this.parent,
@@ -170,12 +206,17 @@ class SingleChildElementType extends ContainerElementType {
         controller.addListener(() {
           PageDesignView.scrollStates[hashCode] = controller.offset;
         });
-        current = SingleChildScrollView(
-          controller: controller,
-          scrollDirection: scroll!,
-          physics: const AlwaysScrollableScrollPhysics(),
-          restorationId: hashCode.toString(),
-          child: children.first,
+        current = GestureDetector(
+          onVerticalDragUpdate: (details) {
+            debugPrint("Drag update");
+          },
+          child: SingleChildScrollView(
+            controller: controller,
+            scrollDirection: scroll!,
+            physics: const AlwaysScrollableScrollPhysics(),
+            restorationId: hashCode.toString(),
+            child: children.first,
+          ),
         );
       } catch (e, s) {
         debugPrint("Error in SingleChildScrollView: $e $s");

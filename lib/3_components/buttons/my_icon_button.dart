@@ -178,15 +178,24 @@ class MyIconButtonDecoration {
     );
   }
 
-  static const MyIconButtonDecoration onDarkBar = MyIconButtonDecoration(
+  static const MyIconButtonDecoration onDarkBar8 = MyIconButtonDecoration(
     iconColor: InteractiveColorSettings(color: Colors.white),
     borderRadius: 0,
-    backgroundColor: InteractiveColorSettings(
-      color: Colors.transparent,
-      hoverColor: MyColors.mildDifference,
-      selectedColor: MyColors.mediumDifference,
-    ),
+    backgroundColor: _defaultBackground,
     padding: 8,
+  );
+
+  static const MyIconButtonDecoration onDarkBar12 = MyIconButtonDecoration(
+    iconColor: InteractiveColorSettings(color: Colors.white),
+    borderRadius: 0,
+    backgroundColor: _defaultBackground,
+    padding: 12,
+  );
+
+  static const _defaultBackground = InteractiveColorSettings(
+    color: Colors.transparent,
+    hoverColor: MyColors.mildDifference,
+    selectedColor: MyColors.mediumDifference,
   );
 }
 

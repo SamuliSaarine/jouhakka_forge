@@ -1,10 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/1_helpers/functions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
+import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/layout/context_popup.dart';
 import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
@@ -15,7 +16,8 @@ import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
-//TODO: App freezes when nested singleChildContainers have auto size and shift is pressed
+part 'element_builder_interface_extension.dart';
+
 class ElementBuilderInterface extends StatefulWidget {
   final void Function(UIElement element, int index) onBodyChanged;
 
@@ -50,9 +52,8 @@ class ElementBuilderInterface extends StatefulWidget {
 
 class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   UIElement get element => widget.element!;
-  late final GlobalKey globalKey;
+  late GlobalKey globalKey;
   final List<GlobalKey> childKeys = [];
-  double buttonSize = 20;
   bool _isSelected = false;
   bool _isHovering = false;
   late SizeType _lastWidthType;
@@ -61,16 +62,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   @override
   void initState() {
     globalKey = GlobalKey();
-    if (element is ContainerElement) {
-      ContainerElement containerElement = element as ContainerElement;
-      for (int i = 0; i < containerElement.children.length; i++) {
-        childKeys.add(GlobalKey());
-      }
-    }
-
-    _lastWidthType = element.width.type;
-    _lastHeightType = element.height.type;
-    element.addListener(updateOnChange);
+    elementInit();
     super.initState();
   }
 
@@ -78,17 +70,48 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   void didUpdateWidget(covariant ElementBuilderInterface oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // If the source has changed, reattach the listener to the new source
-    if (widget.onBodyChanged != oldWidget.onBodyChanged) {
-      element.removeListener(updateOnChange);
-      element.addListener(updateOnChange);
+    //If the source has changed, reattach the listener to the new source
+    if (widget.element != oldWidget.element) {
+      elementDispose();
+      elementInit();
     }
   }
 
   @override
   void dispose() {
-    element.removeListener(updateOnChange);
+    elementDispose();
     super.dispose();
+  }
+
+  @override
+  void setState(void Function() fn) {
+    super.setState(fn);
+  }
+
+  void elementInit() {
+    if (element is ContainerElement) {
+      ContainerElement containerElement = element as ContainerElement;
+      for (int i = 0; i < containerElement.children.length; i++) {
+        childKeys.add(GlobalKey());
+      }
+      (element as ContainerElement).childNotifier.addListener(() {
+        setState(() {});
+      });
+    }
+
+    _lastWidthType = element.width.type;
+    _lastHeightType = element.height.type;
+    element.addListener(updateOnChange);
+  }
+
+  void elementDispose() {
+    element.removeListener(updateOnChange);
+    if (element is ContainerElement) {
+      childKeys.clear();
+      (element as ContainerElement).childNotifier.removeListener(() {
+        setState(() {});
+      });
+    }
   }
 
   void updateOnChange() {
@@ -115,195 +138,102 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     //return ChangeListener<UIElement>(
     //source: element,
     // builder: () {
-    Widget? contentOverride;
-    if (element is ContainerElement) {
-      ContainerElement containerElement = element as ContainerElement;
 
-      Alignment childScaleAlignment = Alignment.bottomRight;
-      if (containerElement.type is FlexElementType) {
-        FlexElementType flexType = containerElement.type as FlexElementType;
-        if (flexType.direction == Axis.horizontal) {
-          childScaleAlignment = Alignment.centerRight;
-        } else {
-          childScaleAlignment = Alignment.bottomCenter;
-        }
-      }
+    Widget? contentOverride = element is ContainerElement
+        ? _containerOverride(element as ContainerElement)
+        : null;
 
-      contentOverride = ContainerChildEditor.from(
-        containerElement,
-        show: widget.showContainerEditor,
-        onAddChild: (direction, {TapUpDetails? details}) async {
-          UIElement? pickedElement;
-          if (details != null) {
-            ContextPopup.open(
-              context,
-              clickPosition: details.globalPosition,
-              child: ElementPicker(
-                root: containerElement.root,
-                parent: containerElement,
-                onElementSelected: (element) {
-                  pickedElement = element;
-                  ContextPopup.close();
-                },
-              ),
-            );
-
-            await ContextPopup.waitOnClose();
-
-            if (pickedElement == null) return;
-          }
-
-          debugPrint("${(widget.element as ContainerElement).children.length}");
-          if (containerElement.type is SingleChildElementType) {
-            containerElement
-                .changeContainerType(FlexElementType(direction.axis));
-          }
-          containerElement.addChild(
-            pickedElement ??
-                (containerElement.children.isEmpty
-                    ? UIElement.defaultBox(containerElement.root,
-                        parent: containerElement)
-                    : containerElement.children.last.clone()),
-          );
-
-          debugPrint("${(widget.element as ContainerElement).children.length}");
-          setState(() {
-            childKeys.add(GlobalKey());
-          });
-        },
-        builder: (child, index) {
-          if (childKeys.length <= index) {
-            childKeys.add(GlobalKey());
-            debugPrint("Key was not initialized properly");
-          }
-          Widget interface = ElementBuilderInterface(
-            globalKey: childKeys[index], // ValueKey("${child.hashCode}_i"),
-            element: child,
-            root: containerElement.root,
-            index: index,
-            scaleAlignment: childScaleAlignment,
-            showContainerEditor: widget.showContainerEditor,
-            onBodyChanged: (element, index) {
-              UIElement childElement = containerElement.children[index];
-              if (childElement != element) {
-                containerElement.children[index] = element;
-              }
-              setState(() {});
-            },
-          );
-
-          bool isFlex = containerElement.type is FlexElementType;
-          Axis direction = isFlex
-              ? (containerElement.type as FlexElementType).direction
-              : Axis.vertical;
-          if (child.expands(axis: direction) && isFlex) {
-            return Expanded(
-              child: interface,
-            );
-          } else {
-            return interface;
-          }
-        },
+    try {
+      Widget current = ElementWidget(
+        element: element,
+        globalKey: globalKey,
+        wireframe: true,
+        canApplyInfinity: !widget.showContainerEditor &&
+            element.parent != null &&
+            element.parent!.type is SingleChildElementType,
+        overrideContent: contentOverride,
+        overridePadding: contentOverride != null &&
+            element.padding.hasValue &&
+            widget.showContainerEditor,
       );
+
+      try {
+        return SizedBox(
+          width: element.width.tryGetFixed(),
+          height: element.height.tryGetFixed(),
+          child: ClickDetector(
+            opaque: true,
+            onPointerEvent: _onPointerEvent,
+            primaryActionDown: (_) {
+              Session.selectedElement.value = element;
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              fit: StackFit.loose,
+              children: [
+                current,
+                _editors(contentOverride != null),
+              ],
+            ),
+          ),
+        );
+      } catch (e) {
+        debugPrint("Error in build: $e");
+        rethrow;
+      }
+    } catch (e) {
+      debugPrint("Error: $e");
+      rethrow;
     }
 
-    Widget current = ElementWidget(
-      element: element,
-      globalKey: globalKey,
-      wireframe: true,
-      canApplyInfinity: !widget.showContainerEditor &&
-          element.parent != null &&
-          (element.parent! is! ContainerElement ||
-              (element.parent! as ContainerElement).type
-                  is SingleChildElementType),
-      overrideContent: contentOverride,
-      overridePadding: contentOverride != null &&
-          element.padding.hasValue &&
-          widget.showContainerEditor,
-    );
+    //},
+    //);
+  }
 
-    return SizedBox(
-      width: element.width.tryGetFixed(),
-      height: element.height.tryGetFixed(),
-      child: MouseRegion(
-        onEnter: (details) async {
-          if (Session.hoverLocked) return;
-          Session.hoveredElement.value = widget.element;
-        },
-        onExit: (_) {
-          if (Session.hoverLocked) return;
-          if (Session.hoveredElement.value == widget.element) {
-            Session.hoveredElement.value = null;
-          }
-        },
-        onHover: (_) {
-          if (Session.hoverLocked) return;
-          if (Session.hoveredElement.value != null) return;
-          Session.hoveredElement.value = widget.element;
-        },
-        hitTestBehavior: HitTestBehavior.opaque,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            Session.selectedElement.value = widget.element;
+  Widget _editors(bool contentOverridden) {
+    return Positioned.fill(
+      child: SizedBox(
+        width: element.width.value,
+        height: element.height.value,
+        child: ValueListener(
+          source: Session.hoveredElement,
+          condition: (value) {
+            return _isHovering != (value == element);
           },
-          child: Stack(
-            clipBehavior: Clip.none,
-            fit: StackFit.loose,
-            children: [
-              current,
-              Positioned.fill(
-                child: SizedBox(
-                  width: element.width.value,
-                  height: element.height.value,
-                  child: ValueListener(
-                    source: Session.hoveredElement,
-                    condition: (value) {
-                      return _isHovering != (value == widget.element);
-                    },
-                    builder: (hoveringElement) {
-                      _isHovering = hoveringElement == widget.element;
-                      return ValueListener(
-                        source: Session.selectedElement,
-                        condition: (value) {
-                          return _isSelected != (value == widget.element);
-                        },
-                        builder: (selectedElement) {
-                          _isSelected = selectedElement == widget.element;
-                          bool showEditor = _isSelected || _isHovering;
-                          return Stack(
-                            fit: StackFit.loose,
-                            children: showEditor
-                                ? [
-                                    ..._elementInterface(
-                                        contentOverride == null),
-                                    SizedBox.expand(
-                                      child: IgnorePointer(
-                                          child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                              color: Colors.green, width: 1),
-                                        ),
-                                      )),
-                                    ),
-                                    if (widget.scaleAlignment != null)
-                                      _scaleBox(),
-                                  ]
-                                : [],
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
+          builder: (hoveringElement) {
+            _isHovering = hoveringElement == element;
+            return ValueListener(
+              source: Session.selectedElement,
+              condition: (value) {
+                return _isSelected != (value == element);
+              },
+              builder: (selectedElement) {
+                _isSelected = selectedElement == element;
+                bool showEditor = _isSelected || _isHovering;
+                return Stack(
+                  fit: StackFit.loose,
+                  children: showEditor
+                      ? [
+                          ..._elementInterface(!contentOverridden),
+                          SizedBox.expand(
+                            child: IgnorePointer(
+                                child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: Colors.green, width: 1),
+                              ),
+                            )),
+                          ),
+                          if (widget.scaleAlignment != null) _scaleBox(),
+                        ]
+                      : [],
+                );
+              },
+            );
+          },
         ),
       ),
     );
-    //},
-    //);
   }
 
   List<Widget> _elementInterface(bool showPrimary) {
@@ -312,34 +242,31 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         element is ImageElement ||
         element is IconElement;
 
+    double buttonSize =
+        sqrt(min(element.width.value ?? 20, element.height.value ?? 20))
+                .toInt() *
+            2;
+
+    List<MyIconButton> buttons;
+    if (isMedia) {
+      buttons = [
+        _wrapButton(buttonSize),
+        _replaceButton(buttonSize),
+        _stackButton(buttonSize),
+      ];
+    } else {
+      buttons = [
+        _addChildButton(buttonSize),
+        _replaceButton(buttonSize),
+        _stackButton(buttonSize),
+      ];
+    }
+
     return [
-      LayoutBuilder(builder: (context, constraints) {
-        double buttonSize =
-            fastSqrt(min(constraints.maxWidth, constraints.maxHeight)).toInt() *
-                2;
-
-        this.buttonSize = buttonSize;
-
-        List<MyIconButton> buttons;
-        if (isMedia) {
-          buttons = [
-            _wrapButton(buttonSize),
-            _replaceButton(buttonSize),
-            _stackButton(buttonSize),
-          ];
-        } else {
-          buttons = [
-            _addChildButton(buttonSize),
-            _replaceButton(buttonSize),
-            _stackButton(buttonSize),
-          ];
-        }
-
-        return Align(
-          alignment: Alignment.center,
-          child: _buttonContainer(buttons, buttonSize / 4, buttonSize / 4),
-        );
-      })
+      Align(
+        alignment: Alignment.center,
+        child: _buttonContainer(buttons, buttonSize / 4, buttonSize / 4),
+      )
     ];
   }
 
@@ -390,8 +317,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       size: size,
       primaryAction: (_) {
         onAddChild(
-          UIElement.defaultBox(widget.root ?? element.root,
-              parent: widget.element),
+          UIElementType.box,
         );
       },
       secondaryAction: (details) {
@@ -399,10 +325,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           context,
           clickPosition: details.globalPosition,
           child: ElementPicker(
-            root: widget.root ?? widget.element!.root,
-            parent: widget.element,
-            onElementSelected: (element) {
-              onAddChild(element);
+            onElementSelected: (type) {
+              onAddChild(type);
               ContextPopup.close();
             },
           ),
@@ -439,12 +363,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         ContextPopup.open(
           context,
           clickPosition: details.globalPosition,
-          child: ElementPicker(
-              root: widget.root ?? widget.element!.root,
-              parent: widget.element?.parent,
-              onElementSelected: (element) {
-                onReplace(element);
-              }),
+          child: ElementPicker(onElementSelected: (element) {
+            onReplace(element);
+          }),
         );
       },
     );
@@ -452,8 +373,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
   Widget _scaleBox() {
     Alignment alignment = widget.scaleAlignment!;
-    double size = fastSqrt(min(widget.element!.width.value ?? 400,
-        widget.element!.height.value ?? 400));
+    double size =
+        sqrt(min(element.width.value ?? 400, element.height.value ?? 400));
     //debugPrint("Size: $size | ${alignment.ratio}");
     return Align(
       alignment: alignment,
@@ -462,7 +383,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         child: GestureDetector(
           onPanStart: (details) {
             if (!_isSelected) {
-              Session.selectedElement.value = widget.element;
+              Session.selectedElement.value = element;
             }
             debugPrint("Changing cursor");
             Session.hoverLocked = true;
@@ -513,6 +434,17 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     );
   }
 
+  void _onPointerEvent(PointerEvent event) {
+    if (Session.hoverLocked) return;
+    if (event is PointerEnterEvent ||
+        (event is PointerHoverEvent && Session.hoveredElement.value == null)) {
+      Session.hoveredElement.value = element;
+    } else if (event is PointerExitEvent &&
+        Session.hoveredElement.value == element) {
+      Session.hoveredElement.value = null;
+    }
+  }
+
   void onWrap() {
     ContainerElement wrap = ContainerElement(
         children: [element],
@@ -532,23 +464,26 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     widget.onBodyChanged(stack, widget.index);
   }
 
-  void onReplace(UIElement element) {
-    widget.onBodyChanged(element, widget.index);
+  void onReplace(UIElementType type) {
+    UIElement newElement = UIElement.fromType(
+        type, widget.element?.root ?? widget.root!, widget.element?.parent);
+    widget.onBodyChanged(newElement, widget.index);
   }
 
-  void onAddChild(UIElement element) {
+  void onAddChild(UIElementType type) {
     late ContainerElement singleChildElement;
     if (widget.element != null) {
-      singleChildElement = ContainerElement.from(widget.element!,
-          type: SingleChildElementType(), children: [element]);
+      singleChildElement =
+          ContainerElement.from(element, type: SingleChildElementType());
     } else {
       singleChildElement = ContainerElement(
-        children: [element],
         type: SingleChildElementType(),
-        root: widget.root ?? this.element.root,
-        parent: widget.element?.parent,
+        root: widget.root!,
+        parent: null,
       );
     }
+    singleChildElement.addChild(
+        UIElement.fromType(type, singleChildElement.root, singleChildElement));
     childKeys.add(GlobalKey());
     widget.onBodyChanged(singleChildElement, widget.index);
   }

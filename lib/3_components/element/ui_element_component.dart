@@ -35,31 +35,48 @@ class _ElementWidgetState extends State<ElementWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.element.width.type != SizeType.fixed) {
+    if (element.width.type != SizeType.fixed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = widget.globalKey.currentContext;
         if (context != null) {
           final size = context.size;
-          if (size != null && size.width != widget.element.width.value) {
-            widget.element.width.value = size.width;
+          if (size != null && size.width != element.width.value) {
+            element.width.value = size.width;
           }
         }
       });
     }
 
-    if (widget.element.height.type != SizeType.fixed) {
+    if (element.height.type != SizeType.fixed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = widget.globalKey.currentContext;
         if (context != null) {
           final size = context.size;
-          if (size != null && size.height != widget.element.height.value) {
-            widget.element.height.value = size.height;
+          if (size != null && size.height != element.height.value) {
+            element.height.value = size.height;
           }
         }
       });
     }
 
-    Widget? current = widget.overrideContent ?? widget.element.getContent();
+    Widget? current = widget.overrideContent ?? element.getContent();
+
+    if (element is ContainerElement &&
+        (element as ContainerElement).type is FlexElementType) {
+      debugPrint("FlexElementType applied in ${element.id}");
+      FlexElementType flex =
+          (element as ContainerElement).type as FlexElementType;
+      if (flex.crossAxisAlignment == CrossAxisAlignment.stretch) {
+        if (flex.direction == Axis.vertical &&
+            element.width.type == SizeType.auto) {
+          current = IntrinsicWidth(child: current);
+        } else if (flex.direction == Axis.horizontal &&
+            element.height.type == SizeType.auto) {
+          current = IntrinsicHeight(child: current);
+          debugPrint("IntrinsicHeight applied in ${element.id}");
+        }
+      }
+    }
 
     BoxConstraints? constraints =
         (element.width.constraints() || element.height.constraints())
@@ -231,9 +248,6 @@ extension WidgetExtension on UIElement {
     if (parent == null) {
       return false;
     }
-    if (parent! is! ContainerElement) {
-      return false;
-    }
-    return (parent! as ContainerElement).type is FlexElementType;
+    return parent!.type is FlexElementType;
   }
 }

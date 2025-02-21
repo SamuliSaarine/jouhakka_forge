@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
@@ -8,8 +9,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 
 part 'media_elements.g.dart';
-
-//TODO: Test this element
 
 @notifier
 class TextElement extends UIElement {
@@ -66,7 +65,7 @@ class TextElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, UIElement? parent}) => TextElement(
+  UIElement clone({ElementRoot? root, ContainerElement? parent}) => TextElement(
         text: text,
         root: root ?? this.root,
         parent: parent ?? this.parent,
@@ -78,7 +77,6 @@ class TextElement extends UIElement {
 
 enum ImageSource { asset, network }
 
-//TODO: Test this element
 @notifier
 class ImageElement extends UIElement {
   /// File path or URL of the image.
@@ -135,7 +133,8 @@ class ImageElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, UIElement? parent}) => ImageElement(
+  UIElement clone({ElementRoot? root, ContainerElement? parent}) =>
+      ImageElement(
         imagePath: imagePath,
         root: root ?? this.root,
         parent: parent ?? this.parent,
@@ -194,7 +193,7 @@ class IconElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, UIElement? parent}) => IconElement(
+  UIElement clone({ElementRoot? root, ContainerElement? parent}) => IconElement(
         icon: icon,
         root: root ?? this.root,
         parent: parent ?? this.parent,

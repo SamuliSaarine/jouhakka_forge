@@ -57,7 +57,7 @@ extension AxisSizeEditor on AxisSize {
                         tooltip: "Auto",
                         size: 14,
                         isSelected: type == SizeType.auto,
-                        decoration: MyIconButtonDecoration.onDarkBar,
+                        decoration: MyIconButtonDecoration.onDarkBar8,
                         primaryAction: (_) {
                           auto();
                         }),
@@ -66,7 +66,7 @@ extension AxisSizeEditor on AxisSize {
                         tooltip: "Expand",
                         size: 14,
                         isSelected: type == SizeType.expand,
-                        decoration: MyIconButtonDecoration.onDarkBar,
+                        decoration: MyIconButtonDecoration.onDarkBar8,
                         primaryAction: (_) {
                           expand();
                         }),
@@ -75,7 +75,7 @@ extension AxisSizeEditor on AxisSize {
                       tooltip: "Fixed",
                       size: 14,
                       isSelected: type == SizeType.fixed,
-                      decoration: MyIconButtonDecoration.onDarkBar,
+                      decoration: MyIconButtonDecoration.onDarkBar8,
                       primaryAction: (_) {
                         if (value != null) {
                           fixed(value!);
@@ -164,7 +164,7 @@ extension ContainerElementEditor on ContainerElementType {
         icon: LucideIcons.lock,
         tooltip: "No scroll",
         size: 14,
-        decoration: MyIconButtonDecoration.onDarkBar,
+        decoration: MyIconButtonDecoration.onDarkBar8,
         isSelected: scroll == null,
         primaryAction: (_) {
           scroll = null;
@@ -174,7 +174,7 @@ extension ContainerElementEditor on ContainerElementType {
         icon: LucideIcons.moveVertical,
         tooltip: "Vertical scroll",
         size: 14,
-        decoration: MyIconButtonDecoration.onDarkBar,
+        decoration: MyIconButtonDecoration.onDarkBar8,
         isSelected: scroll == Axis.vertical,
         primaryAction: (_) {
           onScrollEnable(Axis.vertical);
@@ -185,7 +185,7 @@ extension ContainerElementEditor on ContainerElementType {
         icon: LucideIcons.moveHorizontal,
         tooltip: "Horizontal scroll",
         size: 14,
-        decoration: MyIconButtonDecoration.onDarkBar,
+        decoration: MyIconButtonDecoration.onDarkBar8,
         isSelected: scroll == Axis.horizontal,
         primaryAction: (_) {
           onScrollEnable(Axis.horizontal);
@@ -256,7 +256,7 @@ extension ContainerElementEditor on ContainerElementType {
             MyIconButton(
               icon: LucideIcons.arrowDown,
               size: 14,
-              decoration: MyIconButtonDecoration.onDarkBar,
+              decoration: MyIconButtonDecoration.onDarkBar8,
               isSelected: type.direction == Axis.vertical,
               primaryAction: (_) {
                 type.direction = Axis.vertical;
@@ -265,7 +265,7 @@ extension ContainerElementEditor on ContainerElementType {
             MyIconButton(
               icon: LucideIcons.arrowRight,
               size: 14,
-              decoration: MyIconButtonDecoration.onDarkBar,
+              decoration: MyIconButtonDecoration.onDarkBar8,
               isSelected: type.direction == Axis.horizontal,
               primaryAction: (_) {
                 type.direction = Axis.horizontal;
@@ -283,7 +283,7 @@ extension ContainerElementEditor on ContainerElementType {
                       ? LucideIcons.alignStartVertical
                       : LucideIcons.alignStartHorizontal,
                   size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar,
+                  decoration: MyIconButtonDecoration.onDarkBar8,
                   isSelected: type.mainAxisAlignment == MainAxisAlignment.start,
                   primaryAction: (_) {
                     type.mainAxisAlignment = MainAxisAlignment.start;
@@ -294,7 +294,7 @@ extension ContainerElementEditor on ContainerElementType {
                       ? LucideIcons.alignEndVertical
                       : LucideIcons.alignEndHorizontal,
                   size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar,
+                  decoration: MyIconButtonDecoration.onDarkBar8,
                   isSelected: type.mainAxisAlignment == MainAxisAlignment.end,
                   primaryAction: (_) {
                     type.mainAxisAlignment = MainAxisAlignment.end;
@@ -305,7 +305,7 @@ extension ContainerElementEditor on ContainerElementType {
                       ? LucideIcons.alignCenterVertical
                       : LucideIcons.alignCenterHorizontal,
                   size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar,
+                  decoration: MyIconButtonDecoration.onDarkBar8,
                   isSelected:
                       type.mainAxisAlignment == MainAxisAlignment.center,
                   primaryAction: (_) {
@@ -317,7 +317,7 @@ extension ContainerElementEditor on ContainerElementType {
                       ? LucideIcons.alignVerticalSpaceAround
                       : LucideIcons.alignHorizontalSpaceAround,
                   size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar,
+                  decoration: MyIconButtonDecoration.onDarkBar8,
                   isSelected:
                       type.mainAxisAlignment == MainAxisAlignment.spaceAround,
                   primaryAction: (_) {
@@ -329,7 +329,7 @@ extension ContainerElementEditor on ContainerElementType {
                       ? LucideIcons.alignVerticalSpaceBetween
                       : LucideIcons.alignHorizontalSpaceBetween,
                   size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar,
+                  decoration: MyIconButtonDecoration.onDarkBar8,
                   isSelected:
                       type.mainAxisAlignment == MainAxisAlignment.spaceBetween,
                   primaryAction: (_) {
@@ -345,7 +345,7 @@ extension ContainerElementEditor on ContainerElementType {
                     ? LucideIcons.alignStartHorizontal
                     : LucideIcons.alignStartVertical,
                 size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar,
+                decoration: MyIconButtonDecoration.onDarkBar8,
                 isSelected: type.crossAxisAlignment == CrossAxisAlignment.start,
                 primaryAction: (_) {
                   type.crossAxisAlignment = CrossAxisAlignment.start;
@@ -356,7 +356,7 @@ extension ContainerElementEditor on ContainerElementType {
                     ? LucideIcons.alignEndHorizontal
                     : LucideIcons.alignEndVertical,
                 size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar,
+                decoration: MyIconButtonDecoration.onDarkBar8,
                 isSelected: type.crossAxisAlignment == CrossAxisAlignment.end,
                 primaryAction: (_) {
                   type.crossAxisAlignment = CrossAxisAlignment.end;
@@ -367,7 +367,7 @@ extension ContainerElementEditor on ContainerElementType {
                     ? LucideIcons.alignCenterHorizontal
                     : LucideIcons.alignCenterVertical,
                 size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar,
+                decoration: MyIconButtonDecoration.onDarkBar8,
                 isSelected:
                     type.crossAxisAlignment == CrossAxisAlignment.center,
                 primaryAction: (_) {
@@ -379,7 +379,7 @@ extension ContainerElementEditor on ContainerElementType {
                     ? LucideIcons.stretchHorizontal
                     : LucideIcons.stretchVertical,
                 size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar,
+                decoration: MyIconButtonDecoration.onDarkBar8,
                 isSelected:
                     type.crossAxisAlignment == CrossAxisAlignment.stretch,
                 primaryAction: (_) {
@@ -390,7 +390,7 @@ extension ContainerElementEditor on ContainerElementType {
                 MyIconButton(
                   icon: LucideIcons.baseline,
                   size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar,
+                  decoration: MyIconButtonDecoration.onDarkBar8,
                   isSelected:
                       type.crossAxisAlignment == CrossAxisAlignment.baseline,
                   primaryAction: (_) {
@@ -405,6 +405,7 @@ extension ContainerElementEditor on ContainerElementType {
   }
 }
 
+//TODO: TextAlignment
 extension TextElementEditor on TextElement {
   Widget getEditor() {
     final TextEditingController textController =
@@ -487,3 +488,5 @@ extension IconElementEditor on IconElement {
     );
   }
 }
+
+//TODO: Padding editor

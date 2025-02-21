@@ -15,12 +15,14 @@ dependencies:
   lucide_icons_flutter: ^1.2.6
   popover: ^0.3.1
   source_gen: ^2.0.0
+  vector_math: ^2.1.4
   web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  test: ^1.25.15
 
 
 flutter:

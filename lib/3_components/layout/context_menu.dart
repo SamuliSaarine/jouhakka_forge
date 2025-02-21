@@ -55,8 +55,8 @@ class _ContextMenuState extends State<ContextMenu> {
       enabled = item.condition!();
     }
     return ClickDetector(
-      primaryAction: enabled
-          ? () {
+      primaryActionDown: enabled
+          ? (_) {
               item.action();
               ContextPopup.close();
             }

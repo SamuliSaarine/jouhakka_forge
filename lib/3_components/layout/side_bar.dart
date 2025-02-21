@@ -126,7 +126,7 @@ class _SideBarState extends State<SideBar> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 240,
+      width: 280,
       child: Row(
         children: [
           ColoredBox(
@@ -170,7 +170,7 @@ class _SideBarState extends State<SideBar> {
           hoverColor: MyColors.mildDifference,
           selectedColor: MyColors.strongDifference,
         ),
-        size: 28,
+        size: 24,
         padding: 8,
         borderRadius: 4,
       ),

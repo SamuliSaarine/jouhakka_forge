@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
@@ -16,7 +17,7 @@ class UIElement extends ChangeNotifier {
   final String id;
 
   /// If this [UIElement] is a child of another [UIElement], put the parent here.
-  final UIElement? parent;
+  final ContainerElement? parent;
 
   /// The width settings of this [UIElement].
   final AxisSize width = AxisSize();
@@ -54,7 +55,7 @@ class UIElement extends ChangeNotifier {
   }
 
   /// Expanding white box with black border and 8px padding.
-  factory UIElement.defaultBox(ElementRoot root, {UIElement? parent}) {
+  factory UIElement.defaultBox(ElementRoot root, {ContainerElement? parent}) {
     UIElement element = UIElement(root: root, parent: parent);
     element.padding.value = const EdgeInsets.all(8);
     element.decoration.value = ElementDecoration()
@@ -62,11 +63,6 @@ class UIElement extends ChangeNotifier {
       ..borderColor.value = Colors.black
       ..borderWidth.value = 1;
     return element;
-  }
-
-  /// Expanding [UIElement] with no `decoration` or content.
-  factory UIElement.empty(ElementRoot root, UIElement? parent) {
-    return UIElement(root: root, parent: parent);
   }
 
   Widget? getContent() {
@@ -105,7 +101,7 @@ class UIElement extends ChangeNotifier {
     decoration.value = other.decoration.value;
   }
 
-  UIElement clone({ElementRoot? root, UIElement? parent}) {
+  UIElement clone({ElementRoot? root, ContainerElement? parent}) {
     UIElement copy =
         UIElement(root: root ?? this.root, parent: parent ?? this.parent);
     copy.width.copy(width);
@@ -117,10 +113,10 @@ class UIElement extends ChangeNotifier {
 
   /// Get different types of [UIElement] from a [UIElementType].
   static UIElement fromType(
-      UIElementType type, ElementRoot root, UIElement? parent) {
+      UIElementType type, ElementRoot root, ContainerElement? parent) {
     switch (type) {
       case UIElementType.empty:
-        return UIElement.empty(root, parent);
+        return UIElement(root: root, parent: parent);
       case UIElementType.box:
         return UIElement.defaultBox(root, parent: parent);
       case UIElementType.text:

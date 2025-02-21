@@ -6,7 +6,10 @@ import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
+import 'package:jouhakka_forge/3_components/layout/element_selector_list.dart';
+import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class RootSelectorPanel<T extends ElementRoot> extends StatefulWidget {
   final ElementRootFolder<T> rootFolder;
@@ -68,7 +71,9 @@ class _RootSelectorPanelState<T extends ElementRoot>
             thickness: 1,
             height: 1,
           ),
-          Expanded(
+          Flexible(
+            flex: 1,
+            fit: FlexFit.loose,
             child: SingleChildScrollView(
               child: ValueListener(
                 source: T == UIPage ? Session.lastPage : Session.lastComponent,
@@ -80,6 +85,42 @@ class _RootSelectorPanelState<T extends ElementRoot>
                   );
                 },
               ),
+            ),
+          ),
+          const Divider(),
+          Flexible(
+            flex: 2,
+            child: ValueListener(
+              source: T == UIPage ? Session.lastPage : Session.lastComponent,
+              builder: (lastRoot) {
+                if (lastRoot == null) {
+                  return Text(T == UIPage
+                      ? "No page selected"
+                      : "No component selected");
+                }
+                return Column(
+                  children: [
+                    Text(
+                      "Selected: ${lastRoot.title}",
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    SingleChildScrollView(
+                      child: ChangeListener(
+                        source: lastRoot,
+                        builder: () {
+                          return ElementSelectorList(
+                            null,
+                            root: lastRoot,
+                            onSelection: (element) {
+                              Session.selectedElement.value = element;
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -133,14 +174,15 @@ class _RootSelectorListState<T extends ElementRoot>
   }
 
   Widget _subfolderWidget(ElementRootFolder<T> subfolder, int index) {
-    if (subfolder.isExpanded && subfolder.totalItems > 0) {
+    if (subfolder.isExpanded &&
+        (subfolder.folders.isNotEmpty || subfolder.items.isNotEmpty)) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _folderItemWidget(subfolder, index),
           Padding(
-            padding: const EdgeInsets.only(left: 16.0),
+            padding: const EdgeInsets.only(left: 8.0),
             child: RootSelectorList<T>(subfolder,
                 onSelection: (root) => widget.onSelection(root)),
           ),
@@ -153,12 +195,12 @@ class _RootSelectorListState<T extends ElementRoot>
 
   Widget _folderItemWidget(ElementRootFolder<T> folder, int index) {
     return ClickDetector(
-      primaryAction: () {
+      primaryActionDown: (_) {
         setState(() {
           folder.isExpanded = !folder.isExpanded;
         });
       },
-      secondaryActionWithDetails: (details) {
+      secondaryActionUp: (details) {
         bool isPage = T == UIPage;
         ContextMenu.open(
           context,
@@ -202,10 +244,13 @@ class _RootSelectorListState<T extends ElementRoot>
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             children: [
-              Icon(folder.isExpanded
-                  ? Icons.keyboard_arrow_down
-                  : Icons.keyboard_arrow_right),
-              Text(folder.name),
+              Icon(
+                folder.isExpanded
+                    ? LucideIcons.chevronDown
+                    : Icons.chevron_right,
+                size: 12,
+              ),
+              Text(folder.name, style: const TextStyle(fontSize: 12)),
             ],
           ),
         ),
@@ -214,25 +259,12 @@ class _RootSelectorListState<T extends ElementRoot>
   }
 
   Widget _itemWidget(T item, int index) {
-    //bool isSelected = item is UIPage ? item == Session.lastPage : item == Session.lastComponent;
     return ClickDetector(
-      primaryAction: () {
+      primaryActionDown: (_) {
         widget.onSelection(item);
       },
-      onPointerEvent: (event) {
-        if (event is PointerExitEvent) {
-          if (hovering != index) return;
-          setState(() {
-            hovering = -1;
-          });
-        } else if (index != hovering) {
-          setState(() {
-            hovering = index;
-          });
-        }
-      },
-      child: ColoredBox(
-        color: (hovering == index || item == widget.selectedRoot)
+      builder: (hovering, _) => ColoredBox(
+        color: (hovering || item == widget.selectedRoot)
             ? Colors.grey[200]!
             : Colors.transparent,
         child: Padding(

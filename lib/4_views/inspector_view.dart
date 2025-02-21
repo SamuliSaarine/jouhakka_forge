@@ -13,6 +13,7 @@ class InspectorView extends StatelessWidget {
 
   //TODO: Make decoration editable
   //TODO: Implement editor for image elements
+  //TODO: Make padding editable
   @override
   Widget build(BuildContext context) {
     bool isPage = root is Page;
