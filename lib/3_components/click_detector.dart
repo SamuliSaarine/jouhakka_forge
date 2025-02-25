@@ -58,121 +58,138 @@ class _ClickDetectorState extends State<ClickDetector> {
   bool get trackState => widget.builder != null;
   bool hovering = false;
   bool pressed = false;
+  final SystemMouseCursor cursor = SystemMouseCursors.click;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (event) {
-        if (widget.onEnter != null) {
-          widget.onEnter!(event);
-        } else if (widget.onPointerEvent != null) {
-          widget.onPointerEvent!(event);
-        }
-        if (trackState) {
-          setState(() {
-            hovering = true;
-          });
-        }
-      },
-      onExit: (event) {
-        if (widget.onExit != null) {
-          widget.onExit!(event);
-        } else if (widget.onPointerEvent != null) {
-          widget.onPointerEvent!(event);
-        }
-        if (hovering) {
-          setState(() {
-            hovering = false;
-          });
-        }
-      },
-      onHover: (event) {
-        if (widget.onHover != null) {
-          widget.onHover!(event);
-        } else if (widget.onPointerEvent != null) {
-          widget.onPointerEvent!(event);
-        }
-      },
+      cursor: cursor,
+      onEnter: _handleEnter,
+      onExit: _handleExit,
+      onHover: _handleHover,
       opaque: widget.opaque,
       hitTestBehavior:
           widget.opaque ? HitTestBehavior.opaque : HitTestBehavior.translucent,
       child: GestureDetector(
-        onTapDown: (details) {
-          if (widget.primaryActionDown != null) {
-            widget.primaryActionDown!(details);
-          } else if (trackState) {
-            setState(() {
-              pressed = true;
-            });
-          }
-        },
-        onLongPressStart: (details) {
-          if (widget.secondaryActionDown != null) {
-            TapDownDetails newDetails = TapDownDetails(
-                kind: PointerDeviceKind.mouse,
-                globalPosition: details.globalPosition,
-                localPosition: details.localPosition);
-            widget.secondaryActionDown!(newDetails);
-          } else if (trackState && pressed == false) {
-            setState(() {
-              pressed = true;
-            });
-          }
-        },
-        onTapUp: (details) {
-          if (widget.primaryActionUp != null) {
-            widget.primaryActionUp!(details);
-          }
-
-          if (pressed) {
-            setState(() {
-              pressed = false;
-            });
-          }
-        },
-        onLongPressEnd: (details) {
-          TapUpDetails translateDetails() => TapUpDetails(
-              kind: PointerDeviceKind.mouse,
-              globalPosition: details.globalPosition,
-              localPosition: details.localPosition);
-          if (widget.secondaryActionUp != null) {
-            widget.secondaryActionUp!(translateDetails());
-          } else if (widget.primaryActionUp != null) {
-            widget.primaryActionUp!(translateDetails());
-          }
-
-          if (pressed) {
-            setState(() {
-              pressed = false;
-            });
-          }
-        },
-        onSecondaryTapDown: (details) {
-          if (widget.secondaryActionDown != null) {
-            widget.secondaryActionDown!(details);
-          } else if (trackState) {
-            setState(() {
-              pressed = true;
-            });
-          }
-        },
-        onSecondaryTapUp: (details) {
-          if (widget.secondaryActionUp != null) {
-            widget.secondaryActionUp!(details);
-          }
-
-          if (pressed) {
-            setState(() {
-              pressed = false;
-            });
-          }
-        },
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onSecondaryTapDown: _handleSecondaryTapDown,
+        onSecondaryTapUp: _handleSecondaryTapUp,
         behavior: widget.opaque
             ? HitTestBehavior.opaque
             : HitTestBehavior.translucent,
         child: widget.child ?? widget.builder!(hovering, pressed),
       ),
     );
+  }
+
+  void _handleEnter(PointerEnterEvent event) {
+    if (widget.onEnter != null) {
+      widget.onEnter!(event);
+    } else if (widget.onPointerEvent != null) {
+      widget.onPointerEvent!(event);
+    }
+    if (trackState) {
+      setState(() {
+        hovering = true;
+      });
+    }
+  }
+
+  void _handleExit(PointerExitEvent event) {
+    if (widget.onExit != null) {
+      widget.onExit!(event);
+    } else if (widget.onPointerEvent != null) {
+      widget.onPointerEvent!(event);
+    }
+    if (hovering) {
+      setState(() {
+        hovering = false;
+      });
+    }
+  }
+
+  void _handleHover(PointerHoverEvent event) {
+    if (widget.onHover != null) {
+      widget.onHover!(event);
+    } else if (widget.onPointerEvent != null) {
+      widget.onPointerEvent!(event);
+    }
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (widget.primaryActionDown != null) {
+      widget.primaryActionDown!(details);
+    } else if (trackState) {
+      setState(() {
+        pressed = true;
+      });
+    }
+  }
+
+  void _handleLongPressStart(LongPressStartDetails details) {
+    if (widget.secondaryActionDown != null) {
+      TapDownDetails newDetails = TapDownDetails(
+          kind: PointerDeviceKind.mouse,
+          globalPosition: details.globalPosition,
+          localPosition: details.localPosition);
+      widget.secondaryActionDown!(newDetails);
+    } else if (trackState && pressed == false) {
+      setState(() {
+        pressed = true;
+      });
+    }
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (widget.primaryActionUp != null) {
+      widget.primaryActionUp!(details);
+    }
+
+    if (pressed) {
+      setState(() {
+        pressed = false;
+      });
+    }
+  }
+
+  void _handleLongPressEnd(LongPressEndDetails details) {
+    TapUpDetails translateDetails() => TapUpDetails(
+        kind: PointerDeviceKind.mouse,
+        globalPosition: details.globalPosition,
+        localPosition: details.localPosition);
+    if (widget.secondaryActionUp != null) {
+      widget.secondaryActionUp!(translateDetails());
+    } else if (widget.primaryActionUp != null) {
+      widget.primaryActionUp!(translateDetails());
+    }
+
+    if (pressed) {
+      setState(() {
+        pressed = false;
+      });
+    }
+  }
+
+  void _handleSecondaryTapDown(TapDownDetails details) {
+    if (widget.secondaryActionDown != null) {
+      widget.secondaryActionDown!(details);
+    } else if (trackState) {
+      setState(() {
+        pressed = true;
+      });
+    }
+  }
+
+  void _handleSecondaryTapUp(TapUpDetails details) {
+    if (widget.secondaryActionUp != null) {
+      widget.secondaryActionUp!(details);
+    }
+
+    if (pressed) {
+      setState(() {
+        pressed = false;
+      });
+    }
   }
 }

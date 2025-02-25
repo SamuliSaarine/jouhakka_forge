@@ -26,6 +26,8 @@ class Session {
       ValueNotifier(MouseCursor.defer);
   static bool hoverLocked = false;
   static ValueNotifier<bool> ctrlDown = ValueNotifier(false);
+  static ValueNotifier<bool> extraPadding = ValueNotifier(false);
+  static double zoom = 1.0;
 
   static const bool scrollEditor = true;
 }

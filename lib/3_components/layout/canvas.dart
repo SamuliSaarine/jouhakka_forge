@@ -59,6 +59,9 @@ class _InteractiveCanvasViewState extends State<InteractiveCanvasView> {
           _transformationController!.value = Matrix4.identity()
             ..translate(resolution.width * scale, 0)
             ..scale(scale);
+          _transformationController!.addListener(() {
+            Session.zoom = _transformationController!.value.getMaxScaleOnAxis();
+          });
           /*_transformationController!.addListener(() {
             debugPrint(
                 "Transform: ${_transformationController!.value.getTranslation()}. Scale: ${_transformationController!.value.getMaxScaleOnAxis()}");

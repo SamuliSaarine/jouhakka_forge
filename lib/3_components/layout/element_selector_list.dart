@@ -5,11 +5,13 @@ import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
+import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
 
 class ElementSelectorList extends StatefulWidget {
   final ContainerElement? parentElement;
   final ElementRoot root;
+  final bool initiallyExpanded;
   final void Function(UIElement item) onSelection;
 
   const ElementSelectorList(
@@ -17,6 +19,7 @@ class ElementSelectorList extends StatefulWidget {
     super.key,
     required this.onSelection,
     required this.root,
+    this.initiallyExpanded = false,
   });
 
   @override
@@ -29,6 +32,9 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
 
   @override
   void initState() {
+    if (widget.initiallyExpanded) {
+      expandedContainers.add(0);
+    }
     super.initState();
   }
 
@@ -37,7 +43,12 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
     return ChangeListener(
         source: widget.parentElement?.childNotifier ?? widget.root,
         builder: () {
-          length = widget.parentElement?.children.length ?? 1;
+          int newLength = widget.parentElement?.children.length ?? 1;
+          if (newLength > length) {
+            expandedContainers.add(length);
+          }
+          length = newLength;
+
           debugPrint("Updating ElementSelectorList");
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -73,6 +84,7 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
               containerElement,
               onSelection: (item) => widget.onSelection(item),
               root: widget.root,
+              initiallyExpanded: true,
             ),
           ),
         ],
@@ -113,19 +125,23 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
       primaryActionDown: (_) {
         widget.onSelection(item);
       },
-      builder: (hovering, _) => ColoredBox(
-        color: (hovering || item == Session.selectedElement)
-            ? MyColors.mediumDifference
-            : Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.only(
-              left: 2.0, right: 8.0, top: 2.0, bottom: 2.0),
-          child: Text(
-            item.label,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ),
+      builder: (hovering, _) => ValueListener(
+          source: Session.selectedElement,
+          builder: (selectedElement) {
+            return ColoredBox(
+              color: (hovering || item == selectedElement)
+                  ? MyColors.mediumDifference
+                  : Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: 2.0, right: 8.0, top: 2.0, bottom: 2.0),
+                child: Text(
+                  item.label,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            );
+          }),
     );
   }
 }

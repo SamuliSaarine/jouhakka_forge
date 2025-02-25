@@ -1,13 +1,16 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/3_components/layout/dynamic_padding.dart';
 
 class ElementWidget extends StatefulWidget {
   final UIElement element;
   final bool wireframe;
   final GlobalKey globalKey;
   final Widget? overrideContent;
-  final bool overridePadding;
+  final bool dynamicPadding;
   final bool canApplyInfinity;
 
   const ElementWidget({
@@ -15,7 +18,7 @@ class ElementWidget extends StatefulWidget {
     required this.globalKey,
     this.wireframe = false,
     this.overrideContent,
-    this.overridePadding = false,
+    this.dynamicPadding = false,
     required this.canApplyInfinity,
   })  : assert(overrideContent == null || element is ContainerElement,
             "Only container elements content can be overridden"),
@@ -116,8 +119,22 @@ class _ElementWidgetState extends State<ElementWidget> {
       current = Align(alignment: alignment!, child: current);
     }*/
 
-    element.padding.ifValue((padding) {
-      if (!widget.overridePadding) {
+    if (current != null) {
+      if (widget.dynamicPadding && element is ContainerElement) {
+        double extraPadding =
+            sqrt(min(element.width.value ?? 20, element.height.value ?? 20));
+        current = DynamicPadding(
+          padding: element.padding.value,
+          extraPadding: extraPadding,
+          child: current,
+        );
+      } else if (element.padding.value != null) {
+        current = Padding(padding: element.padding.value!, child: current);
+      }
+    }
+
+    /*element.padding.ifValue((padding) {
+      if (!widget.dynamicPadding) {
         current = Padding(padding: padding, child: current);
       } else {
         if ((element as ContainerElement).type is FlexElementType) {
@@ -142,7 +159,7 @@ class _ElementWidgetState extends State<ElementWidget> {
           }
         }
       }
-    });
+    });*/
 
     element.decoration.ifValue(
       (decoration) {

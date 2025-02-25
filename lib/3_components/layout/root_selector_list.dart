@@ -114,6 +114,7 @@ class _RootSelectorPanelState<T extends ElementRoot>
                             onSelection: (element) {
                               Session.selectedElement.value = element;
                             },
+                            initiallyExpanded: true,
                           );
                         },
                       ),

@@ -2,15 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
-import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
+import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
 import 'package:jouhakka_forge/3_components/layout/context_popup.dart';
 import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
-import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
@@ -21,10 +19,9 @@ part 'element_builder_interface_extension.dart';
 class ElementBuilderInterface extends StatefulWidget {
   final void Function(UIElement element, int index) onBodyChanged;
 
-  final UIElement? element;
-  final ElementRoot? root;
+  final UIElement element;
   final int index;
-  final bool showContainerEditor;
+  final bool expandStack;
 
   /// - Null means that there will be no scaling box.
   /// - CenterRight means vertical scaling.
@@ -35,14 +32,11 @@ class ElementBuilderInterface extends StatefulWidget {
   const ElementBuilderInterface({
     required GlobalKey globalKey,
     required this.element,
-    this.root,
     this.index = 0,
-    required this.showContainerEditor,
     required this.onBodyChanged,
     this.scaleAlignment,
-  })  : assert(
-            element != null || root != null, "Element or root must be given"),
-        super(key: globalKey);
+    this.expandStack = false,
+  }) : super(key: globalKey);
 
   @override
   State<ElementBuilderInterface> createState() {
@@ -51,7 +45,7 @@ class ElementBuilderInterface extends StatefulWidget {
 }
 
 class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
-  UIElement get element => widget.element!;
+  UIElement get element => widget.element;
   late GlobalKey globalKey;
   final List<GlobalKey> childKeys = [];
   bool _isSelected = false;
@@ -128,13 +122,6 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.element == null) {
-      return Center(
-          child: _addChildButton(
-              min((element.width.value) ?? 144, element.height.value ?? 200) /
-                  6));
-    }
-
     //return ChangeListener<UIElement>(
     //source: element,
     // builder: () {
@@ -148,13 +135,10 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         element: element,
         globalKey: globalKey,
         wireframe: true,
-        canApplyInfinity: !widget.showContainerEditor &&
-            element.parent != null &&
+        canApplyInfinity: element.parent != null &&
             element.parent!.type is SingleChildElementType,
         overrideContent: contentOverride,
-        overridePadding: contentOverride != null &&
-            element.padding.hasValue &&
-            widget.showContainerEditor,
+        dynamicPadding: true,
       );
 
       try {
@@ -164,12 +148,11 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
           child: ClickDetector(
             opaque: true,
             onPointerEvent: _onPointerEvent,
-            primaryActionDown: (_) {
-              Session.selectedElement.value = element;
-            },
+            primaryActionUp: _primaryAction,
+            secondaryActionDown: _secondaryAction,
             child: Stack(
               clipBehavior: Clip.none,
-              fit: StackFit.loose,
+              fit: widget.expandStack ? StackFit.expand : StackFit.loose,
               children: [
                 current,
                 _editors(contentOverride != null),
@@ -185,9 +168,6 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       debugPrint("Error: $e");
       rethrow;
     }
-
-    //},
-    //);
   }
 
   Widget _editors(bool contentOverridden) {
@@ -214,7 +194,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
                   fit: StackFit.loose,
                   children: showEditor
                       ? [
-                          ..._elementInterface(!contentOverridden),
+                          //..._elementInterface(!contentOverridden),
                           SizedBox.expand(
                             child: IgnorePointer(
                                 child: DecoratedBox(
@@ -236,7 +216,71 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     );
   }
 
-  List<Widget> _elementInterface(bool showPrimary) {
+  Widget _scaleBox() {
+    Alignment alignment = widget.scaleAlignment!;
+    double size =
+        sqrt(min(element.width.value ?? 400, element.height.value ?? 400));
+    //debugPrint("Size: $size | ${alignment.ratio}");
+    return Align(
+      alignment: alignment,
+      child: MouseRegion(
+        cursor: alignment.getScaleCursor(),
+        child: GestureDetector(
+          onPanStart: (details) {
+            if (!_isSelected) {
+              Session.selectedElement.value = element;
+            }
+            debugPrint("Changing cursor");
+            Session.hoverLocked = true;
+            Session.globalCursor.value = alignment.getScaleCursor();
+          },
+          onPanUpdate: (details) {
+            Offset localDelta = details.delta * Session.zoom;
+            if (alignment != Alignment.centerRight) {
+              if ((element.height.value ?? 2) < 1 && localDelta.dy < 0) {
+                debugPrint("Height too small");
+                return;
+              }
+
+              element.height.add(localDelta.dy.ceilToDouble());
+            }
+
+            if (alignment == Alignment.bottomCenter) {
+              return;
+            }
+
+            if ((element.width.value ?? 2) < 1 && localDelta.dx < 0) {
+              debugPrint("Width too small");
+              return;
+            }
+
+            element.width.add(localDelta.dx.ceilToDouble());
+          },
+          onPanEnd: (details) {
+            debugPrint("Resetting cursor");
+
+            Session.hoveredElement.value = null;
+            Session.hoverLocked = false;
+            Session.globalCursor.value = MouseCursor.defer;
+          },
+          onPanCancel: () {
+            debugPrint("Pan cancelled");
+
+            Session.hoveredElement.value = null;
+            Session.hoverLocked = false;
+            Session.globalCursor.value = MouseCursor.defer;
+          },
+          child: Container(
+            color: Colors.blue,
+            height: size * alignment.ratio,
+            width: size / alignment.ratio,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /*List<Widget> _elementInterface(bool showPrimary) {
     if (!showPrimary) return [];
     bool isMedia = element is TextElement ||
         element is ImageElement ||
@@ -268,9 +312,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         child: _buttonContainer(buttons, buttonSize / 4, buttonSize / 4),
       )
     ];
-  }
+  }*/
 
-  Widget _buttonContainer(
+  /*Widget _buttonContainer(
       List<MyIconButton> buttons, double spacing, double padding) {
     assert(buttons.length <= 4 && buttons.isNotEmpty,
         "Button count must be between 1 and 4");
@@ -308,9 +352,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         ),
       );
     });
-  }
+  }*/
 
-  MyIconButton _addChildButton(double size) {
+  /*MyIconButton _addChildButton(double size) {
     return MyIconButton(
       icon: Icons.add_circle_outline,
       tooltip: "Add child",
@@ -333,9 +377,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         );
       },
     );
-  }
+  }*/
 
-  MyIconButton _stackButton(double size) {
+  /*MyIconButton _stackButton(double size) {
     return MyIconButton(
       icon: Icons.library_add,
       size: size,
@@ -343,9 +387,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         onStack();
       },
     );
-  }
+  }*/
 
-  MyIconButton _wrapButton(double size) {
+  /*MyIconButton _wrapButton(double size) {
     return MyIconButton(
       icon: Icons.crop_free,
       size: size,
@@ -353,9 +397,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         onWrap();
       },
     );
-  }
+  }*/
 
-  MyIconButton _replaceButton(double size) {
+  /*MyIconButton _replaceButton(double size) {
     return MyIconButton(
       icon: Icons.sync,
       size: size,
@@ -369,122 +413,5 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
         );
       },
     );
-  }
-
-  Widget _scaleBox() {
-    Alignment alignment = widget.scaleAlignment!;
-    double size =
-        sqrt(min(element.width.value ?? 400, element.height.value ?? 400));
-    //debugPrint("Size: $size | ${alignment.ratio}");
-    return Align(
-      alignment: alignment,
-      child: MouseRegion(
-        cursor: alignment.getScaleCursor(),
-        child: GestureDetector(
-          onPanStart: (details) {
-            if (!_isSelected) {
-              Session.selectedElement.value = element;
-            }
-            debugPrint("Changing cursor");
-            Session.hoverLocked = true;
-            Session.globalCursor.value = alignment.getScaleCursor();
-          },
-          onPanUpdate: (details) {
-            if (alignment != Alignment.centerRight) {
-              if ((element.height.value ?? 2) < 1 && details.delta.dy < 0) {
-                debugPrint("Height too small");
-                return;
-              }
-
-              element.height.add(details.delta.dy.ceilToDouble());
-            }
-
-            if (alignment == Alignment.bottomCenter) {
-              return;
-            }
-
-            if ((element.width.value ?? 2) < 1 && details.delta.dx < 0) {
-              debugPrint("Width too small");
-              return;
-            }
-
-            element.width.add(details.delta.dx.ceilToDouble());
-          },
-          onPanEnd: (details) {
-            debugPrint("Resetting cursor");
-
-            Session.hoveredElement.value = null;
-            Session.hoverLocked = false;
-            Session.globalCursor.value = MouseCursor.defer;
-          },
-          onPanCancel: () {
-            debugPrint("Pan cancelled");
-
-            Session.hoveredElement.value = null;
-            Session.hoverLocked = false;
-            Session.globalCursor.value = MouseCursor.defer;
-          },
-          child: Container(
-            color: Colors.blue,
-            height: size * alignment.ratio,
-            width: size / alignment.ratio,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _onPointerEvent(PointerEvent event) {
-    if (Session.hoverLocked) return;
-    if (event is PointerEnterEvent ||
-        (event is PointerHoverEvent && Session.hoveredElement.value == null)) {
-      Session.hoveredElement.value = element;
-    } else if (event is PointerExitEvent &&
-        Session.hoveredElement.value == element) {
-      Session.hoveredElement.value = null;
-    }
-  }
-
-  void onWrap() {
-    ContainerElement wrap = ContainerElement(
-        children: [element],
-        type: SingleChildElementType(),
-        root: element.root,
-        parent: element.parent);
-    widget.onBodyChanged(wrap, widget.index);
-  }
-
-  void onStack() {
-    ContainerElement stack = ContainerElement(
-      children: [element],
-      type: StackElementType(),
-      root: element.root,
-      parent: element.parent,
-    );
-    widget.onBodyChanged(stack, widget.index);
-  }
-
-  void onReplace(UIElementType type) {
-    UIElement newElement = UIElement.fromType(
-        type, widget.element?.root ?? widget.root!, widget.element?.parent);
-    widget.onBodyChanged(newElement, widget.index);
-  }
-
-  void onAddChild(UIElementType type) {
-    late ContainerElement singleChildElement;
-    if (widget.element != null) {
-      singleChildElement =
-          ContainerElement.from(element, type: SingleChildElementType());
-    } else {
-      singleChildElement = ContainerElement(
-        type: SingleChildElementType(),
-        root: widget.root!,
-        parent: null,
-      );
-    }
-    singleChildElement.addChild(
-        UIElement.fromType(type, singleChildElement.root, singleChildElement));
-    childKeys.add(GlobalKey());
-    widget.onBodyChanged(singleChildElement, widget.index);
-  }
+  }*/
 }

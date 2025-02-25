@@ -188,7 +188,7 @@ class MyIconButtonDecoration {
   static const MyIconButtonDecoration onDarkBar12 = MyIconButtonDecoration(
     iconColor: InteractiveColorSettings(color: Colors.white),
     borderRadius: 0,
-    backgroundColor: _defaultBackground,
+    backgroundColor: _strongBackground,
     padding: 12,
   );
 
@@ -196,6 +196,11 @@ class MyIconButtonDecoration {
     color: Colors.transparent,
     hoverColor: MyColors.mildDifference,
     selectedColor: MyColors.mediumDifference,
+  );
+  static const _strongBackground = InteractiveColorSettings(
+    color: Colors.transparent,
+    hoverColor: MyColors.mediumDifference,
+    selectedColor: MyColors.strongDifference,
   );
 }
 

@@ -11,7 +11,7 @@ class FloatingBar extends StatelessWidget {
     this.direction = Axis.horizontal,
     this.decoration = FloatingBarDecoration.shadowedLightMode,
     required this.children,
-  });
+  }) : assert(children.length > 0, "FloatingBar must have children");
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +21,13 @@ class FloatingBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(decoration.borderRadius),
         boxShadow: decoration.shadow != null ? [decoration.shadow!] : null,
       ),
-      child: Flex(
-        direction: direction,
-        mainAxisSize: MainAxisSize.min,
-        children: children,
-      ),
+      child: children.length > 1
+          ? Flex(
+              direction: direction,
+              mainAxisSize: MainAxisSize.min,
+              children: children,
+            )
+          : children.first,
     );
   }
 }

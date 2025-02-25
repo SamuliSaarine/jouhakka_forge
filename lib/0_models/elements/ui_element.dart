@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
@@ -332,6 +333,16 @@ class AxisSize extends ChangeNotifier {
       _value ??= 8;
     }
     _value = _value! + value;
+    notifyListeners();
+  }
+
+  void multiply(double value) {
+    if (_type != SizeType.fixed) {
+      _type = SizeType.fixed;
+      _value ??= 8;
+    }
+
+    _value = _value! * clampDouble(1 + value / 10, 0, 2);
     notifyListeners();
   }
 

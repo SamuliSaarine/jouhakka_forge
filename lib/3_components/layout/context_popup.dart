@@ -20,7 +20,20 @@ class ContextPopup {
     if (secondary) {
       closeSecondary();
     } else {
+      bool tryNextFrame = _overlayEntry != null;
       close();
+      if (tryNextFrame) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          open(
+            context,
+            clickPosition: clickPosition,
+            child: child,
+            secondary: secondary,
+            preferBottom: preferBottom,
+          );
+        });
+        return;
+      }
     }
 
     if (!secondary) {
@@ -69,10 +82,17 @@ class ContextPopup {
     // Insert the overlay
     Overlay.of(context).insert(entry);
 
+    debugPrint("Entry is mounted: ${entry.mounted}");
+
     //Post frame callback to calculate the position of the tooltip
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final RenderBox renderBox =
-          tooltipKey.currentContext!.findRenderObject() as RenderBox;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      debugPrint("Calculate key: $tooltipKey");
+      final RenderBox? renderBox =
+          tooltipKey.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox == null) {
+        debugPrint("Render box is null. Entry is mounted: ${entry.mounted}");
+        return;
+      }
       final estimatedSize = renderBox.size;
       debugPrint("Estimated size: $estimatedSize");
 
@@ -145,9 +165,11 @@ class ContextPopup {
 
       if (secondary) {
         _secondaryEntry?.remove();
+        _secondaryEntry?.dispose();
         _secondaryEntry = entry;
       } else {
         _overlayEntry?.remove();
+        _overlayEntry?.dispose();
         _overlayEntry = entry;
       }
 
