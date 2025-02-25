@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/3_components/layout/dynamic_decoration.dart';
 import 'package:jouhakka_forge/3_components/layout/dynamic_padding.dart';
 
 class ElementWidget extends StatefulWidget {
@@ -180,6 +181,11 @@ class _ElementWidgetState extends State<ElementWidget> {
 
         if (decoration.margin != null) {
           current = Padding(padding: decoration.margin!, child: current);
+        }
+      },
+      orElse: () {
+        if (current != null) {
+          current = DynamicDecoration(child: current!);
         }
       },
     );

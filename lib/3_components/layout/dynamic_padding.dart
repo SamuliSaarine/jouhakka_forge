@@ -8,11 +8,12 @@ class DynamicPadding extends StatefulWidget {
   final Widget child;
   final EdgeInsets? padding;
   final double extraPadding;
-  const DynamicPadding(
-      {super.key,
-      required this.padding,
-      required this.extraPadding,
-      required this.child});
+  const DynamicPadding({
+    super.key,
+    required this.padding,
+    required this.extraPadding,
+    required this.child,
+  });
 
   @override
   State<DynamicPadding> createState() => _DynamicPaddingState();

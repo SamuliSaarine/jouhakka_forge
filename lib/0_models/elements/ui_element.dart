@@ -168,7 +168,7 @@ class OptionalProperty<T> {
 
   bool get isNull => _value == null;
 
-  bool ifValue(void Function(T) callback) {
+  bool ifValue(void Function(T) callback, {void Function()? orElse}) {
     if (_value != null) {
       try {
         callback(_value as T);
@@ -177,7 +177,7 @@ class OptionalProperty<T> {
         debugPrint("Error in OptionalProperty<$T>.ifValue: $e | $s");
       }
     }
-
+    orElse?.call();
     return false;
   }
 }
