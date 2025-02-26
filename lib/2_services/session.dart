@@ -4,6 +4,7 @@ import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/project.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
+import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 
 class Session {
   // Selections management
@@ -22,12 +23,14 @@ class Session {
 
   //Interaction management
   static final ValueNotifier<UIElement?> hoveredElement = ValueNotifier(null);
+  static Offset? localHoverPosition;
   static final ValueNotifier<MouseCursor> globalCursor =
       ValueNotifier(MouseCursor.defer);
   static bool hoverLocked = false;
   static ValueNotifier<bool> ctrlDown = ValueNotifier(false);
   static ValueNotifier<bool> extraPadding = ValueNotifier(false);
   static double zoom = 1.0;
+  static ValueNotifier<AddDirection?> addDirection = ValueNotifier(null);
 
   static const bool scrollEditor = true;
 }

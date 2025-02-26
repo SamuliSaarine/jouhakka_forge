@@ -5,12 +5,15 @@ import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/2_services/shortcuts.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
+import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 import 'package:jouhakka_forge/3_components/layout/canvas.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/3_components/element/element_builder_interface.dart';
 import 'package:jouhakka_forge/3_components/layout/floating_bar.dart';
 import 'package:jouhakka_forge/3_components/layout/gap.dart';
 import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
+import 'package:jouhakka_forge/3_components/state_management/keyboard_listener.dart';
+import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 import 'package:jouhakka_forge/3_components/text_field.dart';
 import 'package:jouhakka_forge/4_views/inspector_view.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
@@ -164,23 +167,96 @@ class _PageDesignViewState extends State<PageDesignView> {
       alignment: Alignment.bottomLeft,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24.0, left: 40.0),
-        child: FloatingBar(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ChangeListener(
-              source: _paddingController,
-              builder: () {
-                return MyIconButton(
-                  icon: Icons.dashboard_customize_outlined,
-                  tooltip:
-                      "Toggle container editor (Hold shift to hold editor, double tap to toggle)",
-                  decoration: decoration,
-                  isSelected: _paddingController.xor,
-                  primaryAction: (_) {
-                    _paddingController.toggle();
+            FloatingBar(
+              children: [
+                ChangeListener(
+                  source: _paddingController,
+                  builder: () {
+                    return MyIconButton(
+                      icon: Icons.dashboard_customize_outlined,
+                      tooltip:
+                          "Toggle container editor (Hold shift to hold editor, double tap to toggle)",
+                      decoration: decoration,
+                      isSelected: _paddingController.xor,
+                      primaryAction: (_) {
+                        _paddingController.toggle();
+                      },
+                    );
                   },
-                );
+                ),
+              ],
+            ),
+            Gap.w8,
+            ValueListener(
+              source: Session.hoveredElement,
+              builder: (hoveredElement) {
+                if (hoveredElement != null) {
+                  return FloatingBar(
+                    decoration: const FloatingBarDecoration(
+                      backgroundColor: MyColors.mediumDifference,
+                      borderRadius: 12,
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          hoveredElement.label,
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: HardwareKeyboardListener(
+                          sourceKey: LogicalKeyboardKey.shiftLeft,
+                          builder: (isPressed) {
+                            return Row(
+                              children: [
+                                Text(
+                                    "Left click: ${isPressed ? "New child" : "Select"}\nRight click: ${isPressed ? "Pick child" : "Context menu"}",
+                                    style: const TextStyle(
+                                        color: Colors.black, fontSize: 12)),
+                                if (isPressed)
+                                  ValueListener(
+                                      source: Session.addDirection,
+                                      builder: (addDirection) {
+                                        final IconData icon;
+                                        switch (addDirection) {
+                                          case AddDirection.top:
+                                            icon = LucideIcons.arrowUp;
+                                            break;
+                                          case AddDirection.bottom:
+                                            icon = LucideIcons.arrowDown;
+                                            break;
+                                          case AddDirection.left:
+                                            icon = LucideIcons.arrowLeft;
+                                            break;
+                                          case AddDirection.right:
+                                            icon = LucideIcons.arrowRight;
+                                            break;
+                                          default:
+                                            icon = LucideIcons.dot;
+                                        }
+                                        return Icon(
+                                          icon,
+                                          color: Colors.black,
+                                          size: 16,
+                                        );
+                                      })
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return const SizedBox.shrink();
+                }
               },
-            )
+            ),
           ],
         ),
       ),

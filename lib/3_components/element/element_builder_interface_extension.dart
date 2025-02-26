@@ -94,6 +94,121 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     return pickedElement;
   }
 
+  void onAddChild(UIElementType? type, AddDirection? direction) {
+    if (element is ContainerElement) {
+      ContainerElement containerElement = element as ContainerElement;
+      if (containerElement.type is SingleChildElementType) {
+        containerElement.changeContainerType(
+            FlexElementType(direction?.axis ?? Axis.vertical));
+      }
+      childKeys.add(GlobalKey());
+      UIElement? pickedElement;
+      if (type != null) {
+        pickedElement =
+            UIElement.fromType(type, containerElement.root, containerElement);
+      }
+      if (pickedElement == null) {
+        if (containerElement.children.isEmpty) {
+          pickedElement = UIElement.defaultBox(containerElement.root,
+              parent: containerElement);
+        } else {
+          pickedElement = containerElement.children.last.clone();
+        }
+      }
+      containerElement.addChild(
+        pickedElement,
+      );
+    } else {
+      late ContainerElement singleChildElement;
+
+      singleChildElement =
+          ContainerElement.from(element, type: SingleChildElementType());
+
+      type ??= UIElementType.box;
+      singleChildElement.addChild(UIElement.fromType(
+          type, singleChildElement.root, singleChildElement));
+      childKeys.add(GlobalKey());
+      widget.onBodyChanged(singleChildElement, widget.index);
+    }
+  }
+
+  void _onPointerEvent(PointerEvent event) {
+    void updateDirection({addHandler = false}) {
+      bool lateHandler(KeyEvent keyEvent) {
+        bool value = false;
+
+        if (keyEvent is KeyDownEvent &&
+            keyEvent.logicalKey == LogicalKeyboardKey.shiftLeft) {
+          if (Session.hoveredElement.value == element &&
+              Session.localHoverPosition != null) {
+            Session.addDirection.value =
+                _calculateDirection(Session.localHoverPosition!);
+            value = true;
+          }
+          HardwareKeyboard.instance.removeHandler(lateHandler);
+        }
+
+        return value;
+      }
+
+      if (HardwareKeyboard.instance
+          .isLogicalKeyPressed(LogicalKeyboardKey.shiftLeft)) {
+        Session.addDirection.value = _calculateDirection(event.localPosition);
+      } else if (addHandler) {
+        HardwareKeyboard.instance.addHandler(lateHandler);
+      }
+      Session.localHoverPosition = event.localPosition;
+    }
+
+    if (Session.hoverLocked) return;
+    if (event is PointerHoverEvent && Session.hoveredElement.value == element) {
+      updateDirection();
+    }
+    if (event is PointerEnterEvent ||
+        (event is PointerHoverEvent && Session.hoveredElement.value == null)) {
+      Session.hoveredElement.value = element;
+      updateDirection(addHandler: true);
+    } else if (event is PointerExitEvent &&
+        Session.hoveredElement.value == element) {
+      Session.hoveredElement.value = null;
+      if (Session.addDirection.value != null) {
+        Session.addDirection.value = null;
+      }
+    }
+  }
+
+  void onWrap(bool decorate) {
+    ContainerElement wrap = ContainerElement(
+      children: [element],
+      type: SingleChildElementType(),
+      root: element.root,
+      parent: element.parent,
+    );
+    if (decorate) {
+      wrap.decoration.value = ElementDecoration()
+        ..backgroundColor.value = Colors.white
+        ..borderColor.value = Colors.black
+        ..borderWidth.value = 1;
+    }
+    widget.onBodyChanged(wrap, widget.index);
+  }
+
+  void onStack() {
+    ContainerElement stack = ContainerElement(
+      children: [element],
+      type: StackElementType(),
+      root: element.root,
+      parent: element.parent,
+    );
+    widget.onBodyChanged(stack, widget.index);
+  }
+
+  void onReplace(UIElementType type) {
+    UIElement newElement =
+        UIElement.fromType(type, widget.element.root, widget.element.parent);
+    widget.onBodyChanged(newElement, widget.index);
+  }
+
   AddDirection? _calculateDirection(Offset localPos) {
     if (element is! ContainerElement) return null;
     double extra = 0;
@@ -157,165 +272,23 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     double boundaryBottomRight =
         height - bottom - slopeBottomRight * (width - right - localPos.dx);
 
-    debugPrint(
-        "Pos: $localPos. Boundaries: $boundaryTopLeft, $boundaryTopRight, $boundaryBottomLeft, $boundaryBottomRight");
+    //debugPrint("Pos: $localPos. Boundaries: $boundaryTopLeft, $boundaryTopRight, $boundaryBottomLeft, $boundaryBottomRight");
 
     // Determine correct direction
     if (localPos.dy < boundaryTopLeft && localPos.dy < boundaryTopRight) {
-      debugPrint("Slope to top");
+      //debugPrint("Slope to top");
       return AddDirection.top;
     } else if (localPos.dy > boundaryBottomLeft &&
         localPos.dy > boundaryBottomRight) {
-      debugPrint("Slope to bottom");
+      //debugPrint("Slope to bottom");
       return AddDirection.bottom;
     } else if (localPos.dx < midX) {
-      debugPrint("Slope to left");
+      //debugPrint("Slope to left");
       return AddDirection.left;
     } else {
-      debugPrint("Slope to right");
+      //debugPrint("Slope to right");
       return AddDirection.right;
     }
-  }
-
-  AddDirection? _calculateDirectionOld(Offset localPos) {
-    double extra = 0;
-    double width = element.width.value!;
-    double height = element.height.value!;
-    if (Session.extraPadding.value) {
-      extra = sqrt(min(width, height));
-    }
-
-    EdgeInsets padding = element.padding.value ?? EdgeInsets.zero;
-    double top = max(padding.top, extra);
-    double bottom = max(padding.bottom, extra);
-    double left = max(padding.left, extra);
-    double right = max(padding.right, extra);
-
-    if (localPos.dy < top) return AddDirection.top;
-    if (localPos.dy > height - bottom) return AddDirection.bottom;
-    if (localPos.dx < left) return AddDirection.left;
-    if (localPos.dx > width - right) return AddDirection.right;
-    return null;
-  }
-
-  /*if ((element as ContainerElement).type is SingleChildElementType) {
-      Alignment alignment =
-          ((element as ContainerElement).type as SingleChildElementType)
-              .alignment;
-      if (alignment.y == 0) {
-        top = height / 2;
-        bottom = height / 2;
-      } else if (alignment.y == 1) {
-        top = height - bottom;
-      } else if (alignment.y == -1) {
-        bottom = height - top;
-      }
-
-      if (alignment.x == 0) {
-        left = width / 2;
-        right = width / 2;
-      } else if (alignment.x == 1) {
-        left = width - right;
-      } else if (alignment.x == -1) {
-        right = width - left;
-      }
-    }
-
-    AddDirection yDirection = AddDirection.bottom;
-    double yDistance = bottom;
-    if (localPos.dy < top) {
-      yDirection = AddDirection.top;
-      yDistance = top;
-    }
-
-    if (localPos.dx < right && right * (right / yDistance) < yDistance) {
-      return AddDirection.right;
-    } else if (localPos.dx > width - left &&
-        left * (left / yDistance) < yDistance) {
-      return AddDirection.left;
-    } else {
-      return yDirection;
-    }*/
-
-  void onAddChild(UIElementType? type, AddDirection? direction) {
-    if (element is ContainerElement) {
-      ContainerElement containerElement = element as ContainerElement;
-      if (containerElement.type is SingleChildElementType) {
-        containerElement.changeContainerType(
-            FlexElementType(direction?.axis ?? Axis.vertical));
-      }
-      childKeys.add(GlobalKey());
-      UIElement? pickedElement;
-      if (type != null) {
-        pickedElement =
-            UIElement.fromType(type, containerElement.root, containerElement);
-      }
-      if (pickedElement == null) {
-        if (containerElement.children.isEmpty) {
-          pickedElement = UIElement.defaultBox(containerElement.root,
-              parent: containerElement);
-        } else {
-          pickedElement = containerElement.children.last.clone();
-        }
-      }
-      containerElement.addChild(
-        pickedElement,
-      );
-    } else {
-      late ContainerElement singleChildElement;
-
-      singleChildElement =
-          ContainerElement.from(element, type: SingleChildElementType());
-
-      type ??= UIElementType.box;
-      singleChildElement.addChild(UIElement.fromType(
-          type, singleChildElement.root, singleChildElement));
-      childKeys.add(GlobalKey());
-      widget.onBodyChanged(singleChildElement, widget.index);
-    }
-  }
-
-  void _onPointerEvent(PointerEvent event) {
-    if (Session.hoverLocked) return;
-    if (event is PointerEnterEvent ||
-        (event is PointerHoverEvent && Session.hoveredElement.value == null)) {
-      Session.hoveredElement.value = element;
-    } else if (event is PointerExitEvent &&
-        Session.hoveredElement.value == element) {
-      Session.hoveredElement.value = null;
-    }
-  }
-
-  void onWrap(bool decorate) {
-    ContainerElement wrap = ContainerElement(
-      children: [element],
-      type: SingleChildElementType(),
-      root: element.root,
-      parent: element.parent,
-    );
-    if (decorate) {
-      wrap.decoration.value = ElementDecoration()
-        ..backgroundColor.value = Colors.white
-        ..borderColor.value = Colors.black
-        ..borderWidth.value = 1;
-    }
-    widget.onBodyChanged(wrap, widget.index);
-  }
-
-  void onStack() {
-    ContainerElement stack = ContainerElement(
-      children: [element],
-      type: StackElementType(),
-      root: element.root,
-      parent: element.parent,
-    );
-    widget.onBodyChanged(stack, widget.index);
-  }
-
-  void onReplace(UIElementType type) {
-    UIElement newElement =
-        UIElement.fromType(type, widget.element.root, widget.element.parent);
-    widget.onBodyChanged(newElement, widget.index);
   }
 
   Widget _containerOverride(ContainerElement containerElement) {

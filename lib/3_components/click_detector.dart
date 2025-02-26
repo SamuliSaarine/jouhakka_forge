@@ -30,7 +30,7 @@ class ClickDetector extends StatefulWidget {
     this.onExit,
     this.onHover,
     this.onPointerEvent,
-    this.opaque = false,
+    this.opaque = true,
 
     /// This widget does not directly affect child state
     this.child,

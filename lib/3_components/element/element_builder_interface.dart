@@ -235,7 +235,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
             Session.globalCursor.value = alignment.getScaleCursor();
           },
           onPanUpdate: (details) {
-            Offset localDelta = details.delta * Session.zoom;
+            Offset localDelta =
+                details.delta * Session.zoom.clamp(1, 3); // / 2 + 0.5);
             if (alignment != Alignment.centerRight) {
               if ((element.height.value ?? 2) < 1 && localDelta.dy < 0) {
                 debugPrint("Height too small");
@@ -254,7 +255,7 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
               return;
             }
 
-            element.width.add(localDelta.dx.ceilToDouble());
+            element.width.add(localDelta.dx.roundToDouble());
           },
           onPanEnd: (details) {
             debugPrint("Resetting cursor");
@@ -279,139 +280,4 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
       ),
     );
   }
-
-  /*List<Widget> _elementInterface(bool showPrimary) {
-    if (!showPrimary) return [];
-    bool isMedia = element is TextElement ||
-        element is ImageElement ||
-        element is IconElement;
-
-    double buttonSize =
-        sqrt(min(element.width.value ?? 20, element.height.value ?? 20))
-                .toInt() *
-            2;
-
-    List<MyIconButton> buttons;
-    if (isMedia) {
-      buttons = [
-        _wrapButton(buttonSize),
-        _replaceButton(buttonSize),
-        _stackButton(buttonSize),
-      ];
-    } else {
-      buttons = [
-        _addChildButton(buttonSize),
-        _replaceButton(buttonSize),
-        _stackButton(buttonSize),
-      ];
-    }
-
-    return [
-      Align(
-        alignment: Alignment.center,
-        child: _buttonContainer(buttons, buttonSize / 4, buttonSize / 4),
-      )
-    ];
-  }*/
-
-  /*Widget _buttonContainer(
-      List<MyIconButton> buttons, double spacing, double padding) {
-    assert(buttons.length <= 4 && buttons.isNotEmpty,
-        "Button count must be between 1 and 4");
-
-    return LayoutBuilder(builder: (context, constraints) {
-      double aspectRatio = constraints.maxWidth / constraints.maxHeight;
-
-      int crossAxisCount = 1;
-      if ((buttons.length == 2 || buttons.length == 3) && aspectRatio > 1.0) {
-        crossAxisCount = buttons.length;
-      } else if (buttons.length == 4) {
-        if (aspectRatio > 0.5) {
-          if (aspectRatio > 2) {
-            crossAxisCount = 4;
-          } else {
-            crossAxisCount = 2;
-          }
-        }
-      }
-
-      double maxWidth = crossAxisCount * buttons[0].size +
-          padding * 2 +
-          spacing * (crossAxisCount - 1);
-
-      return Center(
-        child: Container(
-          color: Colors.white.withValues(alpha: 0.8),
-          width: maxWidth,
-          padding: EdgeInsets.all(padding),
-          child: Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: buttons,
-          ),
-        ),
-      );
-    });
-  }*/
-
-  /*MyIconButton _addChildButton(double size) {
-    return MyIconButton(
-      icon: Icons.add_circle_outline,
-      tooltip: "Add child",
-      size: size,
-      primaryAction: (_) {
-        onAddChild(
-          UIElementType.box,
-        );
-      },
-      secondaryAction: (details) {
-        ContextPopup.open(
-          context,
-          clickPosition: details.globalPosition,
-          child: ElementPicker(
-            onElementSelected: (type) {
-              onAddChild(type);
-              ContextPopup.close();
-            },
-          ),
-        );
-      },
-    );
-  }*/
-
-  /*MyIconButton _stackButton(double size) {
-    return MyIconButton(
-      icon: Icons.library_add,
-      size: size,
-      primaryAction: (details) {
-        onStack();
-      },
-    );
-  }*/
-
-  /*MyIconButton _wrapButton(double size) {
-    return MyIconButton(
-      icon: Icons.crop_free,
-      size: size,
-      primaryAction: (details) {
-        onWrap();
-      },
-    );
-  }*/
-
-  /*MyIconButton _replaceButton(double size) {
-    return MyIconButton(
-      icon: Icons.sync,
-      size: size,
-      primaryAction: (details) {
-        ContextPopup.open(
-          context,
-          clickPosition: details.globalPosition,
-          child: ElementPicker(onElementSelected: (element) {
-            onReplace(element);
-          }),
-        );
-      },
-    );
-  }*/
 }
