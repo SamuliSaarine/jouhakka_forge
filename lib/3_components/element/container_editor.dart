@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 
-//TODO: In other branch, test different system where instead of buttons, you can add items by shift + click. Direction is determined by cursor position relative to the element.
 class ContainerChildEditor extends StatelessWidget {
   final Widget elementWidget;
   final bool show;
@@ -25,13 +25,13 @@ class ContainerChildEditor extends StatelessWidget {
   }
 
   factory ContainerChildEditor.from(
-    ContainerElement element, {
+    ElementContainer element, {
     required bool show,
     required double buttonSize,
     void Function(AddDirection direction, {TapUpDetails? details})? onAddChild,
     required Widget Function(UIElement child, int index) builder,
   }) {
-    debugPrint("SingleChildEditor.build ${element.id}");
+    debugPrint("SingleChildEditor.build ${element.element.id}");
 
     Widget child(UIElement child, int index) {
       return builder(child, index);
@@ -45,8 +45,8 @@ class ContainerChildEditor extends StatelessWidget {
     if (element.type is FlexElementType) {
       Axis direction = (element.type as FlexElementType).direction;
       bool axisAutoSize = direction == Axis.vertical
-          ? element.height.type == SizeType.auto
-          : element.width.type == SizeType.auto;
+          ? element.element.height.type == SizeType.auto
+          : element.element.width.type == SizeType.auto;
 
       return FlexChildEditor(
         direction,
@@ -60,8 +60,8 @@ class ContainerChildEditor extends StatelessWidget {
     } else if (element.type is SingleChildElementType) {
       return SingleChildEditor(
         key: ValueKey("${element.hashCode}_c"),
-        autoHeight: element.height.type == SizeType.auto,
-        autoWidth: element.width.type == SizeType.auto,
+        autoHeight: element.element.height.type == SizeType.auto,
+        autoWidth: element.element.width.type == SizeType.auto,
         show: show,
         buttonSize: buttonSize,
         elementWidget: element.type.getWidget(children),

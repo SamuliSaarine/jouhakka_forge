@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/3_components/layout/dynamic_decoration.dart';
 import 'package:jouhakka_forge/3_components/layout/dynamic_padding.dart';
@@ -21,7 +22,7 @@ class ElementWidget extends StatefulWidget {
     this.overrideContent,
     this.dynamicPadding = false,
     required this.canApplyInfinity,
-  })  : assert(overrideContent == null || element is ContainerElement,
+  })  : assert(overrideContent == null || element is ElementContainer,
             "Only container elements content can be overridden"),
         super(key: globalKey);
 
@@ -65,11 +66,11 @@ class _ElementWidgetState extends State<ElementWidget> {
 
     Widget? current = widget.overrideContent ?? element.getContent();
 
-    if (element is ContainerElement &&
-        (element as ContainerElement).type is FlexElementType) {
+    if (element is ElementContainer &&
+        (element as ElementContainer).type is FlexElementType) {
       debugPrint("FlexElementType applied in ${element.id}");
       FlexElementType flex =
-          (element as ContainerElement).type as FlexElementType;
+          (element as ElementContainer).type as FlexElementType;
       if (flex.crossAxisAlignment == CrossAxisAlignment.stretch) {
         if (flex.direction == Axis.vertical &&
             element.width.type == SizeType.auto) {
@@ -120,75 +121,54 @@ class _ElementWidgetState extends State<ElementWidget> {
       current = Align(alignment: alignment!, child: current);
     }*/
 
-    if (current != null) {
-      if (widget.dynamicPadding && element is ContainerElement) {
+    ElementContainer? container = element.tryGetContainer();
+    if (container != null && current != null) {
+      if (widget.dynamicPadding) {
         double extraPadding =
             sqrt(min(element.width.value ?? 20, element.height.value ?? 20));
         current = DynamicPadding(
-          padding: element.padding.value,
+          padding: container.padding,
           extraPadding: extraPadding,
           child: current,
         );
-      } else if (element.padding.value != null) {
-        current = Padding(padding: element.padding.value!, child: current);
+      } else if (container.padding != EdgeInsets.zero) {
+        current = Padding(padding: container.padding, child: current);
       }
     }
 
-    /*element.padding.ifValue((padding) {
-      if (!widget.dynamicPadding) {
-        current = Padding(padding: padding, child: current);
-      } else {
-        if ((element as ContainerElement).type is FlexElementType) {
-          FlexElementType flex =
-              (element as ContainerElement).type as FlexElementType;
-          if (flex.direction == Axis.vertical) {
-            current = Padding(
-              padding: EdgeInsets.only(
-                left: padding.left,
-                right: padding.right,
-              ),
-              child: current,
-            );
-          } else {
-            current = Padding(
-              padding: EdgeInsets.only(
-                top: padding.top,
-                bottom: padding.bottom,
-              ),
-              child: current,
-            );
+    if (element is BranchElement) {
+      (element as BranchElement).decoration.ifValue(
+        (decoration) {
+          Color? backgroundColor = decoration.backgroundColor.value;
+          current = DecoratedBox(
+            decoration: BoxDecoration(
+              color: backgroundColor == Colors.transparent
+                  ? null
+                  : backgroundColor,
+              borderRadius: BorderRadius.circular(decoration.radius.value),
+              border: decoration.borderColor.value == Colors.transparent ||
+                      decoration.borderWidth.value == 0
+                  ? null
+                  : Border.all(
+                      color: decoration.borderColor.value,
+                      width: decoration.borderWidth.value,
+                    ),
+            ),
+            child: current,
+          );
+
+          if (decoration.margin.value != null) {
+            current =
+                Padding(padding: decoration.margin.value!, child: current);
           }
-        }
-      }
-    });*/
-
-    element.decoration.ifValue(
-      (decoration) {
-        Color? backgroundColor = decoration.backgroundColor.value;
-        current = DecoratedBox(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(decoration.radius.value),
-            border: decoration.borderColor.value == null
-                ? null
-                : Border.all(
-                    color: decoration.borderColor.value!,
-                    width: decoration.borderWidth.value,
-                  ),
-          ),
-          child: current,
-        );
-
-        if (decoration.margin != null) {
-          current = Padding(padding: decoration.margin!, child: current);
-        }
-      },
-      orElse: () {
-        if (current != null) {
-          current = DynamicDecoration(child: current!);
-        }
-      },
-    );
+        },
+        orElse: () {
+          if (current != null) {
+            current = DynamicDecoration(child: current!);
+          }
+        },
+      );
+    }
 
     /*if (clipBehavior != Clip.none) {
       assert(decoration != null);
@@ -220,57 +200,5 @@ class _ElementWidgetState extends State<ElementWidget> {
     }*/
 
     return current!;
-  }
-}
-
-extension WidgetExtension on UIElement {
-  Widget widget() {
-    Widget? component;
-    component = getContent();
-
-    if (width.type == SizeType.expand || height.type == SizeType.expand) {
-      if (insideColumnOrRow()) {
-        component =
-            component != null ? Expanded(child: component) : const Spacer();
-      }
-    }
-    return component!;
-  }
-
-  Widget wireframe({bool wrappedToInterface = false}) {
-    Widget? component;
-    component = getContentAsWireframe();
-
-    component = Container(
-      width: width.tryGetFixed(),
-      height: height.tryGetFixed(),
-      decoration: decoration.isNull
-          ? _wireframeEmptyDecoration()
-          : _wireframeDecoration(),
-      child: component,
-    );
-
-    return component;
-  }
-
-  BoxDecoration _wireframeDecoration() {
-    return BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: Colors.black, width: 1),
-    );
-  }
-
-  BoxDecoration _wireframeEmptyDecoration() {
-    return BoxDecoration(
-      color: Colors.transparent,
-      border: Border.all(color: Colors.blue, width: 0.5),
-    );
-  }
-
-  bool insideColumnOrRow() {
-    if (parent == null) {
-      return false;
-    }
-    return parent!.type is FlexElementType;
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
@@ -9,26 +10,34 @@ import '../../3_components/element/ui_element_component.dart';
 
 part 'container_element.g.dart';
 
-class ContainerElement extends UIElement {
+class ElementContainer extends ChangeNotifier {
+  final BranchElement element;
+
   /// List of [UIElement]s that are direct children of this container.
   final List<UIElement> children = [];
-  final ChangeNotifier childNotifier = ChangeNotifier();
+  final ValueNotifier<int> childNotifier = ValueNotifier(1);
 
-  /// Specifies how the [ContainerElement] acts and is displayed.
-  ContainerElementType _type;
-  ContainerElementType get type => _type;
-  set type(ContainerElementType value) {
+  /// Specifies how the [ElementContainer] acts and is displayed.
+  ElementContainerType _type;
+  ElementContainerType get type => _type;
+  set type(ElementContainerType value) {
     _type = value;
     _type.addListener(notifyListeners);
     _type.notifyListeners();
   }
 
+  EdgeInsets _padding = EdgeInsets.zero;
+  EdgeInsets get padding => _padding;
+  set padding(EdgeInsets value) {
+    _padding = value;
+    notifyListeners();
+  }
+
   /// [UIElement] that can contain one or more [UIElement]s.
-  ContainerElement({
+  ElementContainer({
+    required this.element,
     List<UIElement> children = const [],
-    required ContainerElementType type,
-    required super.root,
-    required super.parent,
+    required ElementContainerType type,
   }) : _type = type {
     _type.addListener(notifyListeners);
     for (UIElement child in children) {
@@ -43,7 +52,7 @@ class ContainerElement extends UIElement {
     }
 
     if (child.parent != this) {
-      child = child.clone(root: root, parent: this);
+      child = child.clone();
     }
 
     /*if (type.scroll != null) {
@@ -54,7 +63,7 @@ class ContainerElement extends UIElement {
       }
     }*/
     children.add(child);
-    childNotifier.notifyListeners();
+    childNotifier.value++;
   }
 
   void removeChild(UIElement child) {
@@ -65,20 +74,10 @@ class ContainerElement extends UIElement {
     if (children.length == 1 && type is! SingleChildElementType) {
       type = SingleChildElementType();
     } else if (children.isEmpty) {
-      _toRegularElement();
-      return;
+      element.content.value = null;
+      dispose();
     }
-    childNotifier.notifyListeners();
-  }
-
-  void _toRegularElement() {
-    assert(children.isEmpty, "Container must be empty to convert to element");
-    UIElement newElement = UIElement(root: root, parent: parent)..copy(this);
-    if (parent != null) {
-      parent!.replaceAt(parent!.indexOf(this), newElement);
-    } else {
-      root.body = newElement;
-    }
+    childNotifier.value--;
   }
 
   void reorderChild(int oldIndex, int newIndex) {
@@ -91,42 +90,41 @@ class ContainerElement extends UIElement {
 
   void replaceAt(int index, UIElement element) {
     assert(index >= 0 && index < children.length, "Index out of bounds");
-    bool needsClone = element.parent != this || element.root != root;
-    children[index] =
-        needsClone ? element.clone(root: root, parent: this) : element;
+    bool needsClone =
+        element.parent != this || element.root != this.element.root;
+    children[index] = needsClone
+        ? element.clone(root: this.element.root, parent: this)
+        : element;
     childNotifier.notifyListeners();
   }
 
-  void changeContainerType(ContainerElementType newType) {
+  void changeContainerType(ElementContainerType newType) {
     Axis? oldScroll = type.scroll;
     type = newType..scroll = oldScroll;
   }
 
-  /// Creates a [ContainerElement] from a [UIElement].
-  ///
-  /// Useful if you want to keep decoration or size settings from the original element.
-  factory ContainerElement.from(
-    UIElement element, {
-    required ContainerElementType type,
-    List<UIElement> children = const [],
-  }) =>
-      ContainerElement(
-          children: children,
-          type: type,
-          root: element.root,
-          parent: element.parent)
-        ..copy(element);
-
+  //TODO: Used only in play mode, test this when play mode is implemented
   /// Returns the content of the container.
   @override
   Widget? getContent() {
     if (children.isEmpty) return null;
-    if (children.length == 1) return children[0].widget();
-    List<Widget> widgetChildren = children.map((e) => e.widget()).toList();
+    if (children.length == 1) {
+      return ElementWidget(
+        element: children.first,
+        globalKey: GlobalKey(),
+        canApplyInfinity: true,
+      );
+    }
+    List<Widget> widgetChildren = children
+        .map(
+          (e) => ElementWidget(
+              element: e, globalKey: GlobalKey(), canApplyInfinity: false),
+        )
+        .toList();
     if (type is FlexElementType) {
       AxisSize axisSize = (type as FlexElementType).direction == Axis.horizontal
-          ? width
-          : height;
+          ? element.width
+          : element.height;
       bool hugContent = axisSize.type == SizeType.auto;
       return (type as FlexElementType).getWidget(
         widgetChildren,
@@ -136,42 +134,43 @@ class ContainerElement extends UIElement {
     return type.getWidget(widgetChildren);
   }
 
-  @override
-  void copy(UIElement other) {
-    super.copy(other);
-    if (other is ContainerElement && other.type == type) {
+  void copy(ElementContainer other) {
+    if (other.type.runtimeType == type.runtimeType) {
       type.copy(other.type);
     }
   }
 
-  @override
-  UIElement clone({ElementRoot? root, ContainerElement? parent}) {
-    ContainerElement newElement = ContainerElement(
-        root: root ?? this.root,
-        parent: parent ?? this.parent,
-        type: type.clone());
+  ElementContainer clone({BranchElement? element}) {
+    ElementContainer newElement = ElementContainer(
+      element: element ?? this.element,
+      type: type.clone(),
+    );
     newElement.copy(this);
     for (UIElement child in children) {
-      newElement.addChild(child.clone(root: root, parent: newElement));
+      newElement.addChild(
+        child.clone(
+          root: newElement.element.root,
+          parent: newElement,
+        ),
+      );
     }
     return newElement;
   }
 
-  @override
   String get label => type.label;
 }
 
 @notifier
-abstract class ContainerElementType extends ChangeNotifier {
+abstract class ElementContainerType extends ChangeNotifier {
   /// Returns a [Widget] that contains the children.
   Widget getWidget(List<Widget> children);
   String get label;
   @notify
   Axis? _scroll;
 
-  ContainerElementType clone();
+  ElementContainerType clone();
 
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     scroll = other.scroll;
   }
 
@@ -182,11 +181,11 @@ abstract class ContainerElementType extends ChangeNotifier {
 }
 
 @notifier
-class SingleChildElementType extends ContainerElementType {
+class SingleChildElementType extends ElementContainerType {
   @notify
   Alignment _alignment = Alignment.center;
 
-  /// [ContainerElementType] that can only have one child.
+  /// [ElementContainerType] that can only have one child.
 
   @override
   Widget getWidget(List<Widget> children, {bool align = true}) {
@@ -227,10 +226,10 @@ class SingleChildElementType extends ContainerElementType {
   }
 
   @override
-  ContainerElementType clone() => SingleChildElementType()..copy(this);
+  ElementContainerType clone() => SingleChildElementType()..copy(this);
 
   @override
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     super.copy(other);
     if (other is SingleChildElementType) {
       alignment = other.alignment;
@@ -242,7 +241,7 @@ class SingleChildElementType extends ContainerElementType {
 }
 
 @notifier
-class FlexElementType extends ContainerElementType {
+class FlexElementType extends ElementContainerType {
   @notify
   Axis _direction = Axis.vertical;
 
@@ -255,7 +254,7 @@ class FlexElementType extends ContainerElementType {
   @notify
   double _spacing = 0;
 
-  /// [ContainerElementType] that arranges children in a row or column.
+  /// [ElementContainerType] that arranges children in a row or column.
   FlexElementType(
     Axis direction,
   ) : _direction = direction;
@@ -308,10 +307,10 @@ class FlexElementType extends ContainerElementType {
   }
 
   @override
-  ContainerElementType clone() => FlexElementType(direction)..copy(this);
+  ElementContainerType clone() => FlexElementType(direction)..copy(this);
 
   @override
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     super.copy(other);
     if (other is FlexElementType) {
       direction = other.direction;
@@ -327,7 +326,7 @@ class FlexElementType extends ContainerElementType {
 
 //StackElement
 @notifier
-class StackElementType extends ContainerElementType {
+class StackElementType extends ElementContainerType {
   @notify
   AlignmentGeometry _alignment = AlignmentDirectional.topStart;
   @notify
@@ -342,10 +341,10 @@ class StackElementType extends ContainerElementType {
   }
 
   @override
-  ContainerElementType clone() => StackElementType()..copy(this);
+  ElementContainerType clone() => StackElementType()..copy(this);
 
   @override
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     super.copy(other);
     if (other is StackElementType) {
       alignment = other.alignment;
@@ -359,7 +358,7 @@ class StackElementType extends ContainerElementType {
 
 //WrapElement
 @notifier
-class WrapElementType extends ContainerElementType {
+class WrapElementType extends ElementContainerType {
   @notify
   Axis _direction = Axis.horizontal;
   @notify
@@ -390,10 +389,10 @@ class WrapElementType extends ContainerElementType {
   }
 
   @override
-  ContainerElementType clone() => WrapElementType()..copy(this);
+  ElementContainerType clone() => WrapElementType()..copy(this);
 
   @override
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     super.copy(other);
     if (other is WrapElementType) {
       direction = other.direction;
@@ -411,7 +410,7 @@ class WrapElementType extends ContainerElementType {
 }
 
 @notifier
-class ScrollableGridElementType extends ContainerElementType {
+class ScrollableGridElementType extends ElementContainerType {
   @notify
   int _crossAxisCount;
 
@@ -448,11 +447,11 @@ class ScrollableGridElementType extends ContainerElementType {
   }
 
   @override
-  ContainerElementType clone() =>
+  ElementContainerType clone() =>
       ScrollableGridElementType(crossAxisCount: crossAxisCount)..copy(this);
 
   @override
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     super.copy(other);
     if (other is ScrollableGridElementType) {
       crossAxisCount = other.crossAxisCount;
@@ -471,7 +470,7 @@ class ScrollableGridElementType extends ContainerElementType {
 }
 
 @notifier
-class ScalingGridElementType extends ContainerElementType {
+class ScalingGridElementType extends ElementContainerType {
   @notify
   WrapAlignment _alignment = WrapAlignment.start;
   @notify
@@ -503,10 +502,10 @@ class ScalingGridElementType extends ContainerElementType {
   }
 
   @override
-  ContainerElementType clone() => ScalingGridElementType()..copy(this);
+  ElementContainerType clone() => ScalingGridElementType()..copy(this);
 
   @override
-  void copy(ContainerElementType other) {
+  void copy(ElementContainerType other) {
     super.copy(other);
     if (other is ScalingGridElementType) {
       alignment = other.alignment;

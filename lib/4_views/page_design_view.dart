@@ -102,6 +102,7 @@ class _PageDesignViewState extends State<PageDesignView> {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: KeyboardListener(

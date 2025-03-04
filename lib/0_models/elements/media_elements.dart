@@ -65,7 +65,7 @@ class TextElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, ContainerElement? parent}) => TextElement(
+  UIElement clone({ElementRoot? root, ElementContainer? parent}) => TextElement(
         text: text,
         root: root ?? this.root,
         parent: parent ?? this.parent,
@@ -133,7 +133,7 @@ class ImageElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, ContainerElement? parent}) =>
+  UIElement clone({ElementRoot? root, ElementContainer? parent}) =>
       ImageElement(
         imagePath: imagePath,
         root: root ?? this.root,
@@ -193,7 +193,7 @@ class IconElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, ContainerElement? parent}) => IconElement(
+  UIElement clone({ElementRoot? root, ElementContainer? parent}) => IconElement(
         icon: icon,
         root: root ?? this.root,
         parent: parent ?? this.parent,

@@ -9,7 +9,7 @@ import 'package:jouhakka_forge/3_components/state_management/value_listener.dart
 import 'package:jouhakka_forge/5_style/colors.dart';
 
 class ElementSelectorList extends StatefulWidget {
-  final ContainerElement? parentElement;
+  final ElementContainer? parentElement;
   final ElementRoot root;
   final bool initiallyExpanded;
   final void Function(UIElement item) onSelection;
@@ -63,14 +63,14 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
 
   Widget _resolveWidget(int index) {
     UIElement? item = widget.parentElement?.children[index] ?? widget.root.body;
-    if (item is ContainerElement) {
+    if (item is ElementContainer) {
       return _containerListWidget(item, index);
     } else {
       return _itemWidget(item, index);
     }
   }
 
-  Widget _containerListWidget(ContainerElement containerElement, int index) {
+  Widget _containerListWidget(ElementContainer containerElement, int index) {
     if (expandedContainers.contains(index) &&
         containerElement.children.isNotEmpty) {
       return Column(
@@ -94,7 +94,7 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
     }
   }
 
-  Widget _containerElementWidget(ContainerElement element, int index) {
+  Widget _containerElementWidget(ElementContainer element, int index) {
     bool isExpanded = expandedContainers.contains(index);
     void expandAction(_) {
       setState(() {

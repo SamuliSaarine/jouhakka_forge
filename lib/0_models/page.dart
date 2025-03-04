@@ -20,8 +20,12 @@ class UIPage extends ElementRoot {
       : super(
           id: IDService.newID('pg'),
         ) {
-    _body = body?.clone(root: this) ?? UIElement(root: this, parent: null)
-      ..decoration.value = ElementDecoration(backgroundColor: backgroundColor)
+    _body = body?.clone(root: this) ??
+        BranchElement(
+          root: this,
+          parent: null,
+          decoration: ElementDecoration(backgroundColor: backgroundColor),
+        )
       ..width.fixed(Session.currentResolution.value.width)
       ..height.fixed(Session.currentResolution.value.height);
   }

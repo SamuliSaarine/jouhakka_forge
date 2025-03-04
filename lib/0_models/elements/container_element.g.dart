@@ -6,7 +6,7 @@ part of 'container_element.dart';
 // NotifierGenerator
 // **************************************************************************
 
-extension ContainerElementTypeNotifyExtension on ContainerElementType {
+extension ContainerElementTypeNotifyExtension on ElementContainerType {
   Axis? get scroll => _scroll;
   set scroll(Axis? value) {
     if (_scroll == value) return;

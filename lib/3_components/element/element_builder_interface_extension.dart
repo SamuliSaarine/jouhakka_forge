@@ -2,7 +2,6 @@ part of 'element_builder_interface.dart';
 
 extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
   void _primaryAction(TapUpDetails details) {
-    debugPrint("Primary action");
     if (HardwareKeyboard.instance.isShiftPressed) {
       AddDirection? direction = _calculateDirection(details.localPosition);
       debugPrint(direction.toString());
@@ -95,8 +94,15 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
   }
 
   void onAddChild(UIElementType? type, AddDirection? direction) {
-    if (element is ContainerElement) {
-      ContainerElement containerElement = element as ContainerElement;
+    if (element is! BranchElement) {
+      if (kDebugMode) {
+        throw Exception("Cannot add child to non-branch element");
+      }
+      return;
+    }
+
+    if (element is ElementContainer) {
+      ElementContainer containerElement = element as ElementContainer;
       if (containerElement.type is SingleChildElementType) {
         containerElement.changeContainerType(
             FlexElementType(direction?.axis ?? Axis.vertical));
@@ -104,12 +110,13 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
       childKeys.add(GlobalKey());
       UIElement? pickedElement;
       if (type != null) {
-        pickedElement =
-            UIElement.fromType(type, containerElement.root, containerElement);
+        pickedElement = UIElement.fromType(
+            type, containerElement.element.root, containerElement);
       }
       if (pickedElement == null) {
         if (containerElement.children.isEmpty) {
-          pickedElement = UIElement.defaultBox(containerElement.root,
+          pickedElement = BranchElement.defaultBox(
+              containerElement.element.root,
               parent: containerElement);
         } else {
           pickedElement = containerElement.children.last.clone();
@@ -119,16 +126,10 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
         pickedElement,
       );
     } else {
-      late ContainerElement singleChildElement;
-
-      singleChildElement =
-          ContainerElement.from(element, type: SingleChildElementType());
-
       type ??= UIElementType.box;
-      singleChildElement.addChild(UIElement.fromType(
-          type, singleChildElement.root, singleChildElement));
-      childKeys.add(GlobalKey());
-      widget.onBodyChanged(singleChildElement, widget.index);
+
+      childKeys.add(GlobalKey()); //TODO: Handle using childNotifier instead
+      //TODO: Make sure that UI is updated properly
     }
   }
 
@@ -178,9 +179,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
   }
 
   void onWrap(bool decorate) {
-    ContainerElement wrap = ContainerElement(
-      children: [element],
-      type: SingleChildElementType(),
+    BranchElement wrap = BranchElement(
       root: element.root,
       parent: element.parent,
     );
@@ -193,15 +192,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     widget.onBodyChanged(wrap, widget.index);
   }
 
-  void onStack() {
-    ContainerElement stack = ContainerElement(
-      children: [element],
-      type: StackElementType(),
-      root: element.root,
-      parent: element.parent,
-    );
-    widget.onBodyChanged(stack, widget.index);
-  }
+  // TOD: onStack
 
   void onReplace(UIElementType type) {
     UIElement newElement =
@@ -210,7 +201,10 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
   }
 
   AddDirection? _calculateDirection(Offset localPos) {
-    if (element is! ContainerElement) return null;
+    ElementContainer? container = element.tryGetContainer();
+    if (container == null) {
+      return null;
+    }
     double extra = 0;
     double width = element.width.value!;
     double height = element.height.value!;
@@ -220,20 +214,16 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
 
     // Get child size and alignment
 
-    Alignment alignment =
-        (element as ContainerElement).type is SingleChildElementType
-            ? ((element as ContainerElement).type as SingleChildElementType)
-                .alignment
-            : Alignment.center;
+    Alignment alignment = container.type is SingleChildElementType
+        ? (container.type as SingleChildElementType).alignment
+        : Alignment.center;
     double childWidth =
-        (element as ContainerElement).children.first.width.value ??
-            element.width.value!;
+        container.children.first.width.value ?? element.width.value!;
     double childHeight =
-        (element as ContainerElement).children.first.height.value ??
-            element.height.value!;
+        container.children.first.height.value ?? element.height.value!;
 
     // Get padding
-    EdgeInsets padding = element.padding.value ?? EdgeInsets.zero;
+    EdgeInsets padding = container.padding;
     double top = max(padding.top, extra);
     double bottom = max(padding.bottom, extra);
     double left = max(padding.left, extra);
@@ -254,8 +244,6 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     // Midpoints for diagonal calculations
     double midX = (childLeft + childRight) / 2;
     double midY = (childTop + childBottom) / 2;
-
-    //TODO: Below this, check effect of alignment to the decision between left and right
 
     // Slopes for diagonal boundaries
     double slopeTopLeft = (midY - top) / (midX - left);
@@ -291,7 +279,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     }
   }
 
-  Widget _containerOverride(ContainerElement containerElement) {
+  Widget _containerOverride(ElementContainer containerElement) {
     Widget childBuilder(UIElement child, int index) {
       void onBodyChanged(UIElement element, int index) {
         UIElement childElement = containerElement.children[index];

@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
@@ -12,6 +14,7 @@ import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
+import 'package:jouhakka_forge/3_components/layout/element_selector_list.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
 part 'element_builder_interface_extension.dart';
@@ -83,12 +86,12 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   }
 
   void elementInit() {
-    if (element is ContainerElement) {
-      ContainerElement containerElement = element as ContainerElement;
+    if (element is ElementContainer) {
+      ElementContainer containerElement = element as ElementContainer;
       for (int i = 0; i < containerElement.children.length; i++) {
         childKeys.add(GlobalKey());
       }
-      (element as ContainerElement).childNotifier.addListener(() {
+      (element as ElementContainer).childNotifier.addListener(() {
         setState(() {});
       });
     }
@@ -100,9 +103,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
   void elementDispose() {
     element.removeListener(updateOnChange);
-    if (element is ContainerElement) {
+    if (element is ElementContainer) {
       childKeys.clear();
-      (element as ContainerElement).childNotifier.removeListener(() {
+      (element as ElementContainer).childNotifier.removeListener(() {
         setState(() {});
       });
     }
@@ -126,8 +129,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     //source: element,
     // builder: () {
 
-    Widget? contentOverride = element is ContainerElement
-        ? _containerOverride(element as ContainerElement)
+    Widget? contentOverride = element is ElementContainer
+        ? _containerOverride(element as ElementContainer)
         : null;
 
     try {

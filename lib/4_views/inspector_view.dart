@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
@@ -30,15 +31,17 @@ class InspectorView extends StatelessWidget {
           ),
         ],
       ),
-      child: ValueListener(
-        source: Session.selectedElement,
-        builder: (element) {
-          if (element == null) {
-            return _rootInspector(isPage);
-          } else {
-            return _elementInspector(element);
-          }
-        },
+      child: SingleChildScrollView(
+        child: ValueListener(
+          source: Session.selectedElement,
+          builder: (element) {
+            if (element == null) {
+              return _rootInspector(isPage);
+            } else {
+              return _elementInspector(element);
+            }
+          },
+        ),
       ),
     );
   }
@@ -47,6 +50,7 @@ class InspectorView extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(element.id),
         Text(element.label),
@@ -65,7 +69,12 @@ class InspectorView extends StatelessWidget {
             child: Text("Cannot edit size of root element"),
           ),
         const Divider(),
-        if (element is ContainerElement) ...[
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          child: element.padding.getEditor(),
+        ),
+        const Divider(),
+        if (element is ElementContainer) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: element.type.getEditor(onScrollEnable: (axis) {
@@ -96,13 +105,17 @@ class InspectorView extends StatelessWidget {
           ),
           const Divider(),
         ],
+        element.decoration.getEditor(),
       ],
     );
   }
 
   Widget _rootInspector(bool isPage) {
-    return const Column(
-      children: [],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(isPage ? "Page" : "Component"),
+      ],
     );
   }
 }

@@ -1,11 +1,11 @@
 {
-    "name": "quickresponsive",
-    "short_name": "quickresponsive",
+    "name": "Jouhakka",
+    "short_name": "Jouhakka",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Design at the speed of thought",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

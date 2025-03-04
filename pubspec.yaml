@@ -12,6 +12,7 @@ dependencies:
   build_runner: ^2.4.15
   flutter:
     sdk: flutter
+  flutter_colorpicker: ^1.1.0
   lucide_icons_flutter: ^1.2.6
   popover: ^0.3.1
   source_gen: ^2.0.0

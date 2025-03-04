@@ -9,11 +9,17 @@ class MyNumberField<T extends num> extends StatefulWidget {
   final String? hintText;
   final void Function(T value) onChanged;
   final Color? textColor;
+  final Function()? onTap;
+  final Function()? onSubmitted;
+  final bool isSelectedOverride;
   const MyNumberField({
     super.key,
     required this.controller,
     this.hintText,
     this.textColor,
+    this.isSelectedOverride = false,
+    this.onTap,
+    this.onSubmitted,
     required this.onChanged,
   });
 
@@ -34,6 +40,21 @@ class _MyNumberFieldState<T extends num> extends State<MyNumberField<T>> {
 
   @override
   Widget build(BuildContext context) {
+    OutlineInputBorder enabledBorder = OutlineInputBorder(
+      borderSide: _isHovering
+          ? const BorderSide(color: MyColors.lighterCharcoal, width: 1.5)
+          : BorderSide.none,
+      borderRadius: MyNumberField._radius,
+    );
+
+    OutlineInputBorder focusedBorder = const OutlineInputBorder(
+      borderSide: BorderSide(
+        color: MyColors.lighterBlue,
+        width: 2,
+      ),
+      borderRadius: MyNumberField._radius,
+    );
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
       onHover: (event) {
@@ -43,6 +64,7 @@ class _MyNumberFieldState<T extends num> extends State<MyNumberField<T>> {
       },
       onExit: (_) => setState(() => _isHovering = false),
       child: TextField(
+        onTap: widget.onTap,
         controller: widget.controller,
         decoration: InputDecoration(
           hintText: widget.hintText,
@@ -50,16 +72,9 @@ class _MyNumberFieldState<T extends num> extends State<MyNumberField<T>> {
           isDense: true,
           filled: true,
           fillColor: MyColors.mildDifference,
-          enabledBorder: OutlineInputBorder(
-            borderSide: _isHovering
-                ? const BorderSide(color: MyColors.lighterCharcoal, width: 1.5)
-                : BorderSide.none,
-            borderRadius: MyNumberField._radius,
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: MyColors.lighterBlue, width: 2),
-            borderRadius: MyNumberField._radius,
-          ),
+          enabledBorder:
+              widget.isSelectedOverride ? focusedBorder : enabledBorder,
+          focusedBorder: focusedBorder,
         ),
         onChanged: (value) {
           try {
@@ -69,6 +84,7 @@ class _MyNumberFieldState<T extends num> extends State<MyNumberField<T>> {
             debugPrint("Invalid value: $value. Error: $e");
           }
         },
+        onSubmitted: (_) => widget.onSubmitted?.call(),
         keyboardType: TextInputType.number,
         inputFormatters: T == int ? _allowInt : _allowDouble,
         style:

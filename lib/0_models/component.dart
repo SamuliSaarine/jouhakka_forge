@@ -12,7 +12,7 @@ class UIComponent extends ElementRoot {
     required super.title,
     UIElement? body,
   }) : super(id: IDService.newID('c')) {
-    this.body = body ?? UIElement.defaultBox(this, parent: null);
+    this.body = body ?? BranchElement.defaultBox(this, parent: null);
   }
 
   factory UIComponent.empty() {

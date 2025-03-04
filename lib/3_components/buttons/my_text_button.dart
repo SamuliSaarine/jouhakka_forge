@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 
 class MyTextButton extends StatefulWidget {
   /// Short tap or left click up
@@ -99,7 +100,7 @@ class _MyTextButtonState extends State<MyTextButton> {
               widget.text,
               style: TextStyle(
                 fontSize: widget.size,
-                color: d.iconColor
+                color: d.textColor
                     .getColor(_isPressed || widget.isSelected, _isHover),
               ),
             ),
@@ -129,7 +130,7 @@ class _MyTextButtonState extends State<MyTextButton> {
 class MyTextButtonDecoration {
   final double size;
 
-  final InteractiveColorSettings iconColor;
+  final InteractiveColorSettings textColor;
   final InteractiveColorSettings backgroundColor;
 
   final double borderRadius;
@@ -141,7 +142,7 @@ class MyTextButtonDecoration {
     this.size = 24.0,
 
     /// Interactive color settings for the icon
-    this.iconColor = const InteractiveColorSettings(color: Colors.black),
+    this.textColor = const InteractiveColorSettings(color: Colors.black),
 
     /// Interactive color settings for the container
     this.backgroundColor =
@@ -160,7 +161,7 @@ class MyTextButtonDecoration {
     double? size,
 
     /// Interactive color settings for the icon
-    InteractiveColorSettings? iconColor,
+    InteractiveColorSettings? textColor,
 
     /// Interactive color settings for the container
     InteractiveColorSettings? backgroundColor,
@@ -173,33 +174,10 @@ class MyTextButtonDecoration {
   }) {
     return MyTextButtonDecoration(
       size: size ?? this.size,
-      iconColor: iconColor ?? this.iconColor,
+      textColor: textColor ?? this.textColor,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       borderRadius: borderRadius ?? this.borderRadius,
       padding: padding ?? this.padding,
     );
-  }
-}
-
-class InteractiveColorSettings {
-  final Color color;
-  final Color? selectedColor;
-  final Color? hoverColor;
-
-  /// Color settings for interactive widgets
-  const InteractiveColorSettings({
-    required this.color,
-    this.selectedColor,
-    this.hoverColor,
-  });
-
-  Color getColor(bool isPressed, bool isHover) {
-    if (isPressed && selectedColor != null) {
-      return selectedColor!;
-    } else if (isHover && hoverColor != null) {
-      return hoverColor!;
-    } else {
-      return color;
-    }
   }
 }

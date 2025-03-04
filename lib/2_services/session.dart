@@ -20,7 +20,6 @@ class Session {
   /// The page that was last edited. If you go to edit settings or components, you dont need to explore page list again to find the page you were editing.
   static final ValueNotifier<UIPage?> lastPage = ValueNotifier(null);
   static final ValueNotifier<UIComponent?> lastComponent = ValueNotifier(null);
-
   //Interaction management
   static final ValueNotifier<UIElement?> hoveredElement = ValueNotifier(null);
   static Offset? localHoverPosition;
