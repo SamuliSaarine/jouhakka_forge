@@ -8,7 +8,7 @@ import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-class UIElement extends ChangeNotifier {
+abstract class UIElement extends ChangeNotifier {
   /// Every [UIElement] is part of an element tree, and every element tree has an [ElementRoot].
   ///
   /// This is the [ElementRoot] of the tree this [UIElement] is part of.
@@ -88,16 +88,14 @@ class UIElement extends ChangeNotifier {
     height.copy(other.height);
   }
 
-  UIElement clone({ElementRoot? root, ElementContainer? parent}) =>
-      UIElement(root: root ?? this.root, parent: parent ?? this.parent)
-        ..copy(this);
+  UIElement clone({ElementRoot? root, ElementContainer? parent});
 
   /// Get different types of [UIElement] from a [UIElementType].
   static UIElement fromType(
       UIElementType type, ElementRoot root, ElementContainer? parent) {
     switch (type) {
       case UIElementType.empty:
-        return UIElement(root: root, parent: parent);
+        return BranchElement(root: root, parent: parent);
       case UIElementType.box:
         return BranchElement.defaultBox(root, parent: parent);
       case UIElementType.text:
@@ -123,16 +121,13 @@ class BranchElement extends UIElement {
     required super.root,
     super.parent,
     ElementDecoration? decoration,
-    (ElementContainerType, List<UIElement>)? content,
+    ElementContainer? content,
   }) {
     this.decoration = OptionalProperty<ElementDecoration>(decoration,
         listener: notifyListeners);
 
     this.content = OptionalProperty<ElementContainer>(
-        content == null
-            ? null
-            : ElementContainer(
-                element: this, type: content.$1, children: content.$2),
+        content?.clone(element: this),
         listener: notifyListeners);
   }
 
@@ -145,6 +140,16 @@ class BranchElement extends UIElement {
       ..borderColor.value = Colors.black
       ..borderWidth.value = 1;
     return element;
+  }
+
+  @override
+  BranchElement clone({ElementRoot? root, ElementContainer? parent}) {
+    return BranchElement(
+      root: root ?? this.root,
+      parent: parent ?? this.parent,
+      decoration: decoration.value?.clone(),
+      content: content.value,
+    );
   }
 
   void addContent(ElementContainerType type, List<UIElement> children) {

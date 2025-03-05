@@ -779,3 +779,15 @@ extension ElementDecorationEditor on ElementDecoration {
     );
   }
 }
+
+extension ElementContainerEditor on ElementContainer {
+  Widget getEditor() {
+    return Column(
+      children: [
+        padding.getEditor("Padding", (padding) {
+          this.padding = padding;
+        }),
+      ],
+    );
+  }
+}

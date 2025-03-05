@@ -63,25 +63,25 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
 
   Widget _resolveWidget(int index) {
     UIElement? item = widget.parentElement?.children[index] ?? widget.root.body;
-    if (item is ElementContainer) {
-      return _containerListWidget(item, index);
+    ElementContainer? container = item.tryGetContainer();
+    if (container != null) {
+      return _containerListWidget(container, index);
     } else {
       return _itemWidget(item, index);
     }
   }
 
-  Widget _containerListWidget(ElementContainer containerElement, int index) {
-    if (expandedContainers.contains(index) &&
-        containerElement.children.isNotEmpty) {
+  Widget _containerListWidget(ElementContainer container, int index) {
+    if (expandedContainers.contains(index) && container.children.isNotEmpty) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _containerElementWidget(containerElement, index),
+          _containerElementWidget(container.element, index),
           Padding(
             padding: const EdgeInsets.only(left: 16.0),
             child: ElementSelectorList(
-              containerElement,
+              container,
               onSelection: (item) => widget.onSelection(item),
               root: widget.root,
               initiallyExpanded: true,
@@ -90,11 +90,11 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
         ],
       );
     } else {
-      return _containerElementWidget(containerElement, index);
+      return _containerElementWidget(container.element, index);
     }
   }
 
-  Widget _containerElementWidget(ElementContainer element, int index) {
+  Widget _containerElementWidget(BranchElement element, int index) {
     bool isExpanded = expandedContainers.contains(index);
     void expandAction(_) {
       setState(() {

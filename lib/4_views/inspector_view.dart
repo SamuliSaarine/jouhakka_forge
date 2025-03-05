@@ -69,10 +69,6 @@ class InspectorView extends StatelessWidget {
             child: Text("Cannot edit size of root element"),
           ),
         const Divider(),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          child: element.padding.getEditor(),
-        ),
         const Divider(),
         if (element is ElementContainer) ...[
           Padding(
@@ -91,21 +87,6 @@ class InspectorView extends StatelessWidget {
           ),
           const Divider(),
         ],
-        if (element is TextElement) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: element.getEditor(),
-          ),
-          const Divider(),
-        ],
-        if (element is IconElement) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: element.getEditor(),
-          ),
-          const Divider(),
-        ],
-        element.decoration.getEditor(),
       ],
     );
   }
@@ -115,6 +96,34 @@ class InspectorView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(isPage ? "Page" : "Component"),
+      ],
+    );
+  }
+
+  Widget _leafElementInspector(LeafElement element) {
+    final Widget? editor;
+    if (element is ImageElement) {
+      //TODO: Implement editor for image elements
+      editor = null;
+    } else if (element is IconElement) {
+      editor = element.getEditor();
+    } else if (element is TextElement) {
+      editor = element.getEditor();
+    } else {
+      debugPrint("No editor found for element: ${element.label}");
+      editor = null;
+    }
+
+    return Padding(padding: const EdgeInsets.all(16), child: editor);
+  }
+
+  Widget _branchElementInspector(BranchElement element) {
+    return Column(
+      children: [
+        element.decoration.getEditor(),
+        if (element.content.value != null) ...[
+          element.content.value!.getEditor(),
+        ],
       ],
     );
   }

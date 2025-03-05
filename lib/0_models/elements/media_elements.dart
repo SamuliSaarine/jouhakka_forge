@@ -10,8 +10,20 @@ import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 
 part 'media_elements.g.dart';
 
+class LeafElement extends UIElement {
+  LeafElement({
+    required super.root,
+    super.parent,
+  });
+
+  @override
+  LeafElement clone({ElementRoot? root, ElementContainer? parent}) {
+    return LeafElement(root: root ?? this.root, parent: parent ?? this.parent);
+  }
+}
+
 @notifier
-class TextElement extends UIElement {
+class TextElement extends LeafElement {
   @notify
   String _text;
   @notify
@@ -65,7 +77,8 @@ class TextElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, ElementContainer? parent}) => TextElement(
+  LeafElement clone({ElementRoot? root, ElementContainer? parent}) =>
+      TextElement(
         text: text,
         root: root ?? this.root,
         parent: parent ?? this.parent,
@@ -78,7 +91,7 @@ class TextElement extends UIElement {
 enum ImageSource { asset, network }
 
 @notifier
-class ImageElement extends UIElement {
+class ImageElement extends LeafElement {
   /// File path or URL of the image.
   @notify
   String _imagePath;
@@ -133,7 +146,7 @@ class ImageElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, ElementContainer? parent}) =>
+  LeafElement clone({ElementRoot? root, ElementContainer? parent}) =>
       ImageElement(
         imagePath: imagePath,
         root: root ?? this.root,
@@ -145,7 +158,7 @@ class ImageElement extends UIElement {
 }
 
 @notifier
-class IconElement extends UIElement {
+class IconElement extends LeafElement {
   @notify
   IconData _icon;
 
@@ -193,7 +206,8 @@ class IconElement extends UIElement {
   }
 
   @override
-  UIElement clone({ElementRoot? root, ElementContainer? parent}) => IconElement(
+  LeafElement clone({ElementRoot? root, ElementContainer? parent}) =>
+      IconElement(
         icon: icon,
         root: root ?? this.root,
         parent: parent ?? this.parent,
