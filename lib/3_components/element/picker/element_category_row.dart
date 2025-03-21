@@ -16,21 +16,25 @@ class ElementCategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Text(title),
-      Row(
-        children: items.map((e) {
-          return MyTitledIconButton(
-            icon: e.icon,
-            tooltip: "",
-            title: e.title +
-                (e.shortcutActivator != null
-                    ? " [${e.shortcutActivator!.triggers!.first.keyLabel}]"
-                    : ""),
-            onTap: () => onElementSelected(e.type),
-          );
-        }).toList(),
-      ),
-    ]);
+    return Column(
+      children: [
+        Text(title),
+        Row(
+          children: items.map(
+            (e) {
+              return MyTitledIconButton(
+                icon: e.icon,
+                tooltip: "",
+                title: e.title +
+                    (e.shortcutActivator != null
+                        ? " [${e.shortcutActivator!.triggers!.first.keyLabel}]"
+                        : ""),
+                onTap: () => onElementSelected(e.type),
+              );
+            },
+          ).toList(),
+        ),
+      ],
+    );
   }
 }

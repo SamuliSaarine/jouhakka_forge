@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
@@ -22,7 +23,7 @@ class ElementWidget extends StatefulWidget {
     this.overrideContent,
     this.dynamicPadding = false,
     required this.canApplyInfinity,
-  })  : assert(overrideContent == null || element is ElementContainer,
+  })  : assert(overrideContent == null || element is BranchElement,
             "Only container elements content can be overridden"),
         super(key: globalKey);
 
@@ -40,25 +41,25 @@ class _ElementWidgetState extends State<ElementWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (element.width.type != SizeType.fixed) {
+    if (element.size.width is AutomaticSize) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = widget.globalKey.currentContext;
         if (context != null) {
           final size = context.size;
-          if (size != null && size.width != element.width.value) {
-            element.width.value = size.width;
+          if (size != null && size.width != element.size.width.renderValue) {
+            (element.size.width as AutomaticSize).renderValue = size.width;
           }
         }
       });
     }
 
-    if (element.height.type != SizeType.fixed) {
+    if (element.size.height is AutomaticSize) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = widget.globalKey.currentContext;
         if (context != null) {
           final size = context.size;
-          if (size != null && size.height != element.height.value) {
-            element.height.value = size.height;
+          if (size != null && size.height != element.size.height.renderValue) {
+            (element.size.height as AutomaticSize).renderValue = size.height;
           }
         }
       });
@@ -66,42 +67,53 @@ class _ElementWidgetState extends State<ElementWidget> {
 
     Widget? current = widget.overrideContent ?? element.getContent();
 
-    if (element is ElementContainer &&
-        (element as ElementContainer).type is FlexElementType) {
+    ElementContainer? container = element.tryGetContainer();
+    if (container != null && container.type is FlexElementType) {
       debugPrint("FlexElementType applied in ${element.id}");
-      FlexElementType flex =
-          (element as ElementContainer).type as FlexElementType;
+      FlexElementType flex = container.type as FlexElementType;
       if (flex.crossAxisAlignment == CrossAxisAlignment.stretch) {
         if (flex.direction == Axis.vertical &&
-            element.width.type == SizeType.auto) {
+            element.size.width is ShrinkingSize) {
           current = IntrinsicWidth(child: current);
         } else if (flex.direction == Axis.horizontal &&
-            element.height.type == SizeType.auto) {
+            element.size.height is ShrinkingSize) {
           current = IntrinsicHeight(child: current);
           debugPrint("IntrinsicHeight applied in ${element.id}");
         }
       }
     }
 
-    BoxConstraints? constraints =
-        (element.width.constraints() || element.height.constraints())
-            ? BoxConstraints(
-                minWidth: element.width.minPixels ?? 0,
-                maxWidth: element.width.maxPixels ?? double.infinity,
-                minHeight: element.height.minPixels ?? 0,
-                maxHeight: element.height.maxPixels ?? double.infinity,
-              )
-            : null;
+    BoxConstraints? constraints;
+    bool constrainedWidth = element.size.width is AutomaticSize &&
+        (element.size.width as AutomaticSize).constrained;
+    bool constrainedHeight = element.size.height is AutomaticSize &&
+        (element.size.height as AutomaticSize).constrained;
+    if (element.size.isConstrained()) {
+      constraints = BoxConstraints(
+        minWidth: constrainedWidth
+            ? (element.size.width as AutomaticSize).min.value
+            : 0,
+        maxWidth: constrainedWidth
+            ? (element.size.width as AutomaticSize).max.value
+            : double.infinity,
+        minHeight: constrainedHeight
+            ? (element.size.height as AutomaticSize).min.value
+            : 0,
+        maxHeight: constrainedHeight
+            ? (element.size.height as AutomaticSize).max.value
+            : double.infinity,
+      );
+    }
 
-    double? width = widget.element.width.tryGetFixed();
-    double? height = widget.element.height.tryGetFixed();
+    double? width = widget.element.size.constantWidth;
+    double? height = widget.element.size.constantHeight;
 
     if (current != null && widget.canApplyInfinity) {
-      if (element.width.type == SizeType.expand) {
+      if (element.size.width is ExpandingSize) {
         width = double.infinity;
         debugPrint("Width is expanded in ${element.id}");
       }
-      if (element.height.type == SizeType.expand) {
+      if (element.size.height is ExpandingSize) {
         height = double.infinity;
         debugPrint("Height is expanded in ${element.id}");
       }
@@ -121,18 +133,17 @@ class _ElementWidgetState extends State<ElementWidget> {
       current = Align(alignment: alignment!, child: current);
     }*/
 
-    ElementContainer? container = element.tryGetContainer();
     if (container != null && current != null) {
       if (widget.dynamicPadding) {
-        double extraPadding =
-            sqrt(min(element.width.value ?? 20, element.height.value ?? 20));
+        double extraPadding = sqrt(min(element.size.width.renderValue ?? 20,
+            element.size.height.renderValue ?? 20));
         current = DynamicPadding(
-          padding: container.padding,
+          padding: container.padding.padding,
           extraPadding: extraPadding,
           child: current,
         );
       } else if (container.padding != EdgeInsets.zero) {
-        current = Padding(padding: container.padding, child: current);
+        current = Padding(padding: container.padding.padding, child: current);
       }
     }
 
@@ -140,27 +151,22 @@ class _ElementWidgetState extends State<ElementWidget> {
       (element as BranchElement).decoration.ifValue(
         (decoration) {
           Color? backgroundColor = decoration.backgroundColor.value;
+
           current = DecoratedBox(
             decoration: BoxDecoration(
               color: backgroundColor == Colors.transparent
                   ? null
                   : backgroundColor,
-              borderRadius: BorderRadius.circular(decoration.radius.value),
-              border: decoration.borderColor.value == Colors.transparent ||
-                      decoration.borderWidth.value == 0
-                  ? null
-                  : Border.all(
-                      color: decoration.borderColor.value,
-                      width: decoration.borderWidth.value,
-                    ),
+              borderRadius: decoration.radius.borderRadius,
+              border: decoration.border.value?.boxBorder,
             ),
             child: current,
           );
 
-          if (decoration.margin.value != null) {
+          /*if (decoration.margin.value != null) {
             current =
                 Padding(padding: decoration.margin.value!, child: current);
-          }
+          }*/
         },
         orElse: () {
           if (current != null) {

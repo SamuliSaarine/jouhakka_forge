@@ -4,6 +4,7 @@ class Gap {
   // Vertical gaps
   static const SizedBox h2 = SizedBox(height: 2);
   static const SizedBox h4 = SizedBox(height: 4);
+  static const SizedBox h6 = SizedBox(height: 6);
   static const SizedBox h8 = SizedBox(height: 8);
   static const SizedBox h12 = SizedBox(height: 12);
   static const SizedBox h16 = SizedBox(height: 16);

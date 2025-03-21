@@ -56,9 +56,9 @@ class _ContextMenuState extends State<ContextMenu> {
     }
     return ClickDetector(
       primaryActionDown: enabled
-          ? (_) {
-              item.action();
+          ? (details) {
               ContextPopup.close();
+              item.action(details);
             }
           : null,
       onPointerEvent: (event) {
@@ -103,7 +103,7 @@ class ContextMenuItem {
   final String text;
   final ShortcutActivator? shortcut;
   final bool Function()? condition;
-  final Function() action;
+  final Function(TapDownDetails tapDetails) action;
 
   const ContextMenuItem(
     this.text, {

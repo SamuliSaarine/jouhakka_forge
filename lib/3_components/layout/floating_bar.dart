@@ -21,13 +21,16 @@ class FloatingBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(decoration.borderRadius),
         boxShadow: decoration.shadow != null ? [decoration.shadow!] : null,
       ),
-      child: children.length > 1
-          ? Flex(
-              direction: direction,
-              mainAxisSize: MainAxisSize.min,
-              children: children,
-            )
-          : children.first,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(decoration.borderRadius),
+        child: children.length > 1
+            ? Flex(
+                direction: direction,
+                mainAxisSize: MainAxisSize.min,
+                children: children,
+              )
+            : children.first,
+      ),
     );
   }
 }
@@ -38,29 +41,29 @@ class FloatingBarDecoration {
   final BoxShadow? shadow;
 
   const FloatingBarDecoration({
-    this.backgroundColor = MyColors.lighterCharcoal,
+    this.backgroundColor = MyColors.storm,
     this.borderRadius = 8,
     this.shadow,
   });
 
   static const FloatingBarDecoration flatLightMode = FloatingBarDecoration(
-    backgroundColor: MyColors.darkerCharcoal,
+    backgroundColor: MyColors.slate,
     borderRadius: 12,
   );
 
   static const FloatingBarDecoration flatDarkMode = FloatingBarDecoration(
-    backgroundColor: MyColors.lighterCharcoal,
+    backgroundColor: MyColors.storm,
     borderRadius: 12,
   );
 
   static const FloatingBarDecoration shadowedLightMode = FloatingBarDecoration(
-    backgroundColor: MyColors.darkerCharcoal,
+    backgroundColor: MyColors.slate,
     borderRadius: 12,
     shadow: _lightShadow,
   );
 
   static const FloatingBarDecoration shadowedDarkMode = FloatingBarDecoration(
-    backgroundColor: MyColors.lighterCharcoal,
+    backgroundColor: MyColors.storm,
     borderRadius: 12,
     shadow: _heavyShadow,
   );

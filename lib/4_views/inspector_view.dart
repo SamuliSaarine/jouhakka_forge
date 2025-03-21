@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/0_models/elements/container_element.dart';
-import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
+import 'package:jouhakka_forge/3_components/element/inspector_modules/a_inspector_modules.dart';
+import 'package:jouhakka_forge/3_components/element/inspector_modules/branch_inspector_modules.dart';
+import 'package:jouhakka_forge/3_components/element/inspector_modules/leaf_inspector_modules.dart';
+import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
+import 'package:jouhakka_forge/3_components/layout/inspector_boxes.dart';
+import 'package:jouhakka_forge/3_components/layout/inspector_title.dart';
+import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
-import 'package:jouhakka_forge/4_views/inspector_modules.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
 
 class InspectorView extends StatelessWidget {
   final ElementRoot root;
@@ -20,17 +25,7 @@ class InspectorView extends StatelessWidget {
     bool isPage = root is Page;
     return Container(
       width: 280,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: const Offset(-1, 0),
-          ),
-        ],
-      ),
+      color: MyColors.light,
       child: SingleChildScrollView(
         child: ValueListener(
           source: Session.selectedElement,
@@ -38,7 +33,7 @@ class InspectorView extends StatelessWidget {
             if (element == null) {
               return _rootInspector(isPage);
             } else {
-              return _elementInspector(element);
+              return _elementInspector(element, context);
             }
           },
         ),
@@ -46,47 +41,40 @@ class InspectorView extends StatelessWidget {
     );
   }
 
-  Widget _elementInspector(UIElement element) {
+  Widget _elementInspector(UIElement element, BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(element.id),
-        Text(element.label),
-        const Divider(),
-        if (element.parent != null) ...[
-          Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: element.width.getEditor("Width")),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: element.height.getEditor("Height"),
+        Padding(
+          padding: const EdgeInsets.only(
+              left: 6.0, right: 6.0, top: 4.0, bottom: 2.0),
+          child: InspectorTitle(
+            element.label,
+            canShrink: false,
+            big: true,
+            tip: element.id,
+            contextMenuItems: [
+              ContextMenuItem(
+                "Delete",
+                action: (details) {
+                  if (element.parent == null) {
+                    debugPrint("Cannot delete element without parent");
+                    return;
+                  }
+                  element.parent!.removeChild(element);
+                },
+              ),
+            ],
           ),
-        ],
-        if (element.parent == null)
-          const Center(
-            child: Text("Cannot edit size of root element"),
-          ),
-        const Divider(),
-        const Divider(),
-        if (element is ElementContainer) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: element.type.getEditor(onScrollEnable: (axis) {
-              for (UIElement child in element.children) {
-                if (axis == Axis.horizontal &&
-                    child.width.type == SizeType.expand) {
-                  child.width.type = SizeType.fixed;
-                } else if (axis == Axis.vertical &&
-                    child.height.type == SizeType.expand) {
-                  child.height.type = SizeType.fixed;
-                }
-              }
-            }),
-          ),
-          const Divider(),
-        ],
+        ),
+        MyDividers.strongHorizontal,
+        element.size.getEditor(element),
+        //_sizeEditors(element),
+        MyDividers.strongHorizontal,
+        if (element is LeafElement) _leafElementInspector(element),
+        if (element is BranchElement) _branchElementInspector(element, context),
       ],
     );
   }
@@ -117,14 +105,54 @@ class InspectorView extends StatelessWidget {
     return Padding(padding: const EdgeInsets.all(16), child: editor);
   }
 
-  Widget _branchElementInspector(BranchElement element) {
-    return Column(
-      children: [
-        element.decoration.getEditor(),
-        if (element.content.value != null) ...[
-          element.content.value!.getEditor(),
-        ],
+  Widget _branchElementInspector(BranchElement element, BuildContext context) {
+    return ManyChangeListeners(
+      sources: [
+        element.content.hasValueNotifier,
+        element.decoration.hasValueNotifier
       ],
+      builder: () {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (element.content.value != null)
+              element.content.value!.getEditor(),
+            if (element.decoration.value != null)
+              element.decoration.value!.getEditor(
+                context,
+                element,
+                onDelete: () => element.decoration.value = null,
+              ),
+          ],
+        );
+      },
     );
   }
+
+  /*Widget _sizeEditors(UIElement element) {
+    if (element.parent != null) {
+      return Padding(
+        padding: const EdgeInsets.all(6.0),
+        child: Column(children: [
+          PropertyFieldBox(
+              title: "Width",
+              tip: "Width of element",
+              content: element.size.width.getEditor("Width"),
+              contextMenuItems: const []),
+          Gap.h2,
+          MyDividers.lightHorizontal,
+          Gap.h2,
+          PropertyFieldBox(
+              title: "Height",
+              tip: "Height of element",
+              content: element.size.height.getEditor("Height"),
+              contextMenuItems: const []),
+        ]),
+      );
+    } else {
+      return const Center(
+        child: Text("Cannot edit size of root element"),
+      );
+    }
+  }*/
 }

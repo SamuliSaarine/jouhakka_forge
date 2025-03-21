@@ -31,7 +31,7 @@ extension _PageDesignViewExtension on _PageDesignViewState {
 
   void _extraPaddingKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
-      debugPrint("Extra padding down");
+      //debugPrint("Extra padding down");
       if (_lastTimePaddingDown != null &&
           DateTime.now().difference(_lastTimePaddingDown!) <
               const Duration(milliseconds: 500)) {
@@ -41,15 +41,15 @@ extension _PageDesignViewExtension on _PageDesignViewState {
       }
       _lastTimePaddingDown = DateTime.now();
     } else if (event is KeyUpEvent) {
-      debugPrint("Extra padding up");
+      //debugPrint("Extra padding up");
       _paddingController.release();
     }
   }
 
   void _updateResolution(Resolution resolution) {
     UIElement body = widget.page.body;
-    body.width.value = resolution.width;
-    body.height.value = resolution.height;
+    body.size.width = ControlledSize.constant(resolution.width);
+    body.size.height = ControlledSize.constant(resolution.height);
     setState(() {
       Session.currentResolution.value = resolution;
     });

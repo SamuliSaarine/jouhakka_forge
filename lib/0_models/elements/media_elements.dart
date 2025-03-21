@@ -170,13 +170,7 @@ class IconElement extends LeafElement {
     IconData icon = LucideIcons.star,
     required super.root,
     super.parent,
-    double? size = 24,
-  }) : _icon = icon {
-    if (size != null) {
-      width.fixed(size);
-      height.fixed(size);
-    }
-  }
+  }) : _icon = icon;
 
   factory IconElement.from(UIElement element,
           {IconData icon = LucideIcons.star}) =>
@@ -184,14 +178,13 @@ class IconElement extends LeafElement {
         icon: icon,
         root: element.root,
         parent: element.parent,
-        size: min(element.width.value ?? 24, element.height.value ?? 24),
       )..copy(element);
 
   @override
   Widget getContent() {
     return Icon(
       icon,
-      size: min(width.value ?? 24, height.value ?? 24),
+      size: min(size.width.renderValue ?? 24, size.height.renderValue ?? 24),
       color: color,
     );
   }
@@ -211,7 +204,6 @@ class IconElement extends LeafElement {
         icon: icon,
         root: root ?? this.root,
         parent: parent ?? this.parent,
-        size: min(width.value ?? 24, height.value ?? 24),
       )..copy(this);
 
   @override

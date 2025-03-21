@@ -58,3 +58,65 @@ class ChangeListenerState<T extends ChangeNotifier>
     return widget.builder();
   }
 }
+
+class ManyChangeListeners extends StatefulWidget {
+  final List<ChangeNotifier> sources;
+  final bool Function()? condition;
+  final Widget Function() builder;
+
+  const ManyChangeListeners({
+    super.key,
+    required this.sources,
+    required this.builder,
+    this.condition,
+  });
+
+  @override
+  ManyChangeListenersState createState() => ManyChangeListenersState();
+}
+
+class ManyChangeListenersState extends State<ManyChangeListeners> {
+  late List<ChangeNotifier> _sources;
+
+  @override
+  void initState() {
+    super.initState();
+    _sources = widget.sources;
+    for (var source in _sources) {
+      source.addListener(_onValueChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ManyChangeListeners oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.sources != oldWidget.sources) {
+      for (var source in oldWidget.sources) {
+        source.removeListener(_onValueChanged);
+      }
+      _sources = widget.sources;
+      for (var source in _sources) {
+        source.addListener(_onValueChanged);
+      }
+    }
+  }
+
+  void _onValueChanged() {
+    if (widget.condition != null && !widget.condition!()) return;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (var source in _sources) {
+      source.removeListener(_onValueChanged);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder();
+  }
+}

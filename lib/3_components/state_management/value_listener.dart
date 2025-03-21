@@ -29,6 +29,18 @@ class ValueListenerState<T> extends State<ValueListener<T>> {
     _source.addListener(_onValueChanged);
   }
 
+  @override
+  void didUpdateWidget(covariant ValueListener<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // If the source has changed, reattach the listener to the new source
+    if (widget.source != oldWidget.source) {
+      _source.removeListener(_onValueChanged);
+      _source = widget.source;
+      _source.addListener(_onValueChanged);
+    }
+  }
+
   void _onValueChanged() {
     if (widget.condition != null && !widget.condition!(_source.value)) return;
     setState(() {});

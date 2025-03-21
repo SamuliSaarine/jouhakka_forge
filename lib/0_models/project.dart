@@ -1,5 +1,6 @@
 import 'package:jouhakka_forge/0_models/component.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
+import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 
 /// [Project] holds all the data of the design project. It contains [UIPage]s and [UIComponent]s in [ElementRootFolder]s.
@@ -11,10 +12,9 @@ class Project {
       ElementRootFolder("Pages", parent: null, items: [UIPage.empty()]);
   final ElementRootFolder<UIComponent> components =
       ElementRootFolder("Components", parent: null);
+  final VariableMap variables = VariableMap();
 
   Project(this.name) : id = IDService.newID("pr");
-
-  Map<String, dynamic> variables = {};
 
   factory Project.empty() {
     return Project("New Project");

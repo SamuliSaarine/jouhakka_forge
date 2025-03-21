@@ -12,7 +12,6 @@ dependencies:
   build_runner: ^2.4.15
   flutter:
     sdk: flutter
-  flutter_colorpicker: ^1.1.0
   lucide_icons_flutter: ^1.2.6
   popover: ^0.3.1
   source_gen: ^2.0.0
@@ -31,4 +30,27 @@ flutter:
   assets:
     - assets/
     - assets/images/
-
+    - assets/fonts/
+  fonts:
+    - family: SometypeMono
+      fonts:
+        - asset: assets/fonts/SometypeMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/SometypeMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SometypeMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/SometypeMono-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/SometypeMono-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/SometypeMono-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/SometypeMono-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/SometypeMono-BoldItalic.ttf
+          weight: 700
+          style: italic

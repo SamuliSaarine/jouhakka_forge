@@ -209,7 +209,7 @@ class _RootSelectorListState<T extends ElementRoot>
           [
             ContextMenuItem(
               "New ${isPage ? "page" : "component"}",
-              action: () {
+              action: (_) {
                 T newItem =
                     isPage ? UIPage.empty() as T : UIComponent.empty() as T;
 
@@ -219,7 +219,7 @@ class _RootSelectorListState<T extends ElementRoot>
             ),
             ContextMenuItem(
               "New folder",
-              action: () {
+              action: (_) {
                 folder.addNewFolder("New Folder");
                 setState(() {});
               },

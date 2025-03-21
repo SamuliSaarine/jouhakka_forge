@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
@@ -26,8 +28,10 @@ class UIPage extends ElementRoot {
           parent: null,
           decoration: ElementDecoration(backgroundColor: backgroundColor),
         )
-      ..width.fixed(Session.currentResolution.value.width)
-      ..height.fixed(Session.currentResolution.value.height);
+      ..size.width =
+          ControlledSize.constant(Session.currentResolution.value.width)
+      ..size.height =
+          ControlledSize.constant(Session.currentResolution.value.height);
   }
 
   factory UIPage.empty() {
@@ -57,34 +61,12 @@ abstract class ElementRoot extends ChangeNotifier {
   @notify
   late UIElement _body;
 
-  Map<String, dynamic> variables = {};
-
-  void setVariable(String key, dynamic value) {
-    variables[key] = value;
-  }
-
-  void removeVariable(String key) {
-    variables.remove(key);
-  }
+  final VariableMap variables = VariableMap();
 
   @override
   void notifyListeners() {
     super.notifyListeners();
     _body.notifyListeners();
-  }
-
-  T getVariable<T>(String key) {
-    try {
-      return variables[key] as T;
-    } catch (e) {
-      if (variables[key] == null) {
-        throw "Variable $key is null";
-      } else if (variables[key] is! T) {
-        throw "Variable $key is not of type $T";
-      } else {
-        rethrow;
-      }
-    }
   }
 
   ElementRoot({required this.id, required this.title, UIElement? body}) {

@@ -11,11 +11,11 @@ class MyTextButton extends StatefulWidget {
   final Function(TapUpDetails details)? secondaryAction;
   final String text;
   final String tooltip;
-  final double? _size;
+  final TextStyle? textStyle;
   final bool isSelected;
   final MyTextButtonDecoration decoration;
 
-  double get size => _size ?? decoration.size;
+  double get size => textStyle?.fontSize ?? decoration.size;
 
   const MyTextButton({
     super.key,
@@ -31,16 +31,16 @@ class MyTextButton extends StatefulWidget {
 
     /// Tooltip to show on hover
     this.tooltip = "",
-
-    /// If you want to override icon size given in the decoration
-    double? size,
+    this.textStyle,
 
     /// Visual settings for the button
     this.decoration = const MyTextButtonDecoration(),
 
     /// If true, toggle's the button's appearance to same as when pressed
     this.isSelected = false,
-  }) : _size = size;
+
+    /// Text style for the button
+  });
 
   @override
   State<MyTextButton> createState() => _MyTextButtonState();
@@ -98,11 +98,12 @@ class _MyTextButtonState extends State<MyTextButton> {
             ),
             child: Text(
               widget.text,
-              style: TextStyle(
-                fontSize: widget.size,
-                color: d.textColor
-                    .getColor(_isPressed || widget.isSelected, _isHover),
-              ),
+              style: widget.textStyle ??
+                  TextStyle(
+                    fontSize: widget.size,
+                    color: d.textColor
+                        .getColor(_isPressed || widget.isSelected, _isHover),
+                  ),
             ),
           ),
         ),

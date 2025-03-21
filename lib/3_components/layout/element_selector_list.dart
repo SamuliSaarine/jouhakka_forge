@@ -49,7 +49,7 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
           }
           length = newLength;
 
-          debugPrint("Updating ElementSelectorList");
+          //debugPrint("Updating ElementSelectorList");
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,9 +63,15 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
 
   Widget _resolveWidget(int index) {
     UIElement? item = widget.parentElement?.children[index] ?? widget.root.body;
-    ElementContainer? container = item.tryGetContainer();
-    if (container != null) {
-      return _containerListWidget(container, index);
+    if (item is BranchElement) {
+      return ValueListener(
+        source: item.content.hasValueNotifier,
+        builder: (hasContent) {
+          return hasContent
+              ? _containerListWidget(item.content.value!, index)
+              : _itemWidget(item, index);
+        },
+      );
     } else {
       return _itemWidget(item, index);
     }
@@ -126,22 +132,23 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
         widget.onSelection(item);
       },
       builder: (hovering, _) => ValueListener(
-          source: Session.selectedElement,
-          builder: (selectedElement) {
-            return ColoredBox(
-              color: (hovering || item == selectedElement)
-                  ? MyColors.mediumDifference
-                  : Colors.transparent,
-              child: Padding(
-                padding: const EdgeInsets.only(
-                    left: 2.0, right: 8.0, top: 2.0, bottom: 2.0),
-                child: Text(
-                  item.label,
-                  overflow: TextOverflow.ellipsis,
-                ),
+        source: Session.selectedElement,
+        builder: (selectedElement) {
+          return ColoredBox(
+            color: (hovering || item == selectedElement)
+                ? MyColors.mediumDifference
+                : Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                  left: 2.0, right: 8.0, top: 2.0, bottom: 2.0),
+              child: Text(
+                item.label,
+                overflow: TextOverflow.ellipsis,
               ),
-            );
-          }),
+            ),
+          );
+        },
+      ),
     );
   }
 }

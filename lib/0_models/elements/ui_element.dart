@@ -3,7 +3,6 @@ import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -20,11 +19,13 @@ abstract class UIElement extends ChangeNotifier {
   /// If this [UIElement] is a child of another [UIElement], put the parent here.
   final ElementContainer? parent;
 
+  final SizeHolder size = SizeHolder.expand();
+
   /// The width settings of this [UIElement].
-  final AxisSize width = AxisSize();
+  //final AxisSizeOld width = AxisSizeOld();
 
   /// The height settings of this [UIElement].
-  final AxisSize height = AxisSize();
+  //final AxisSizeOld height = AxisSizeOld();
 
   ElementContainer? tryGetContainer() {
     if (this is BranchElement) {
@@ -38,15 +39,17 @@ abstract class UIElement extends ChangeNotifier {
     required this.root,
     required this.parent,
   }) : id = IDService.newElementID(root.id) {
-    width.addListener(notifyListeners);
-    height.addListener(notifyListeners);
+    size.addListener(notifyListeners);
+    //width.addListener(notifyListeners);
+    //height.addListener(notifyListeners);
   }
 
   @override
   void dispose() {
     super.dispose();
-    width.dispose();
-    height.dispose();
+    size.dispose();
+    //width.dispose();
+    //height.dispose();
   }
 
   @override
@@ -62,30 +65,10 @@ abstract class UIElement extends ChangeNotifier {
     return null;
   }
 
-  /// Combines the `width` and `height` settings to a [Resolution] object.
-  ///
-  /// Returns `null` if either `width` or `height` value cannot be resolved.
-  Resolution? getResolution() {
-    if (width.value == null || height.value == null) return null;
-    return Resolution(width: width.value!, height: height.value!);
-  }
-
-  /// If `axis` is not specified, returns `true` if either `width` or `height` expands.
-  ///
-  /// If `axis` is specified, returns `true` if the specified `axis` expands.
-  bool expands({Axis? axis}) {
-    if (axis == null) {
-      return width.type == SizeType.expand || height.type == SizeType.expand;
-    } else if (axis == Axis.horizontal) {
-      return width.type == SizeType.expand;
-    } else {
-      return height.type == SizeType.expand;
-    }
-  }
-
   void copy(UIElement other) {
-    width.copy(other.width);
-    height.copy(other.height);
+    size.copy(other.size);
+    //width.copy(other.width);
+    //height.copy(other.height);
   }
 
   UIElement clone({ElementRoot? root, ElementContainer? parent});
@@ -134,23 +117,20 @@ class BranchElement extends UIElement {
   /// Expanding white box with black border and 8px padding.
   factory BranchElement.defaultBox(ElementRoot root,
       {ElementContainer? parent}) {
-    BranchElement element = BranchElement(root: root, parent: parent);
-    element.decoration.value = ElementDecoration()
-      ..backgroundColor.value = Colors.white
-      ..borderColor.value = Colors.black
-      ..borderWidth.value = 1;
+    BranchElement element = BranchElement(
+        root: root, parent: parent, decoration: ElementDecoration.defaultBox);
     return element;
   }
 
   @override
-  BranchElement clone({ElementRoot? root, ElementContainer? parent}) {
-    return BranchElement(
-      root: root ?? this.root,
-      parent: parent ?? this.parent,
-      decoration: decoration.value?.clone(),
-      content: content.value,
-    );
-  }
+  BranchElement clone({ElementRoot? root, ElementContainer? parent}) =>
+      BranchElement(
+        root: root ?? this.root,
+        parent: parent ?? this.parent,
+        decoration: decoration.value?.clone(),
+        //Cloned in the constructor
+        content: content.value,
+      );
 
   void addContent(ElementContainerType type, List<UIElement> children) {
     content.value = ElementContainer(
@@ -166,64 +146,83 @@ class BranchElement extends UIElement {
 
 class ElementDecoration extends ChangeNotifier {
   /// Background color of the [UIElement] as a hex value.
-  EV<Color> backgroundColor = EV(Colors.transparent);
+  final VarField<Color> backgroundColor;
 
   /// Corner radius of the [UIElement].
-  EV<double> radius = EV(0);
+  late MyRadius _radius;
+  MyRadius get radius => _radius;
+  set radius(MyRadius value) {
+    _radius = value.clone(notifyListeners);
+    notifyListeners();
+  }
 
-  /// Border width of the [UIElement].
-  EV<double> borderWidth = EV(0);
+  /// Border of the [UIElement].
+  late final OptionalProperty<MyBorder> border;
 
-  /// Border color of the [UIElement] as a hex value.
-  EV<Color> borderColor = EV(Colors.transparent);
+  DecoratedBox get decoratedBox {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor.value,
+        borderRadius: radius.borderRadius,
+        border: border.value?.boxBorder,
+      ),
+    );
+  }
 
   /// Margin of the [UIElement]. (Space outside the decoration)
-  late final OptionalProperty<EdgeInsets> margin;
+  // late final OptionalProperty<EdgeInsets> margin;
 
   /// Decoration settings for [UIElement]
   ElementDecoration({
     Color? backgroundColor,
-    double? radius,
-    double? borderWidth,
-    Color? borderColor,
+    MyRadius? radius,
+    MyBorder? border,
     EdgeInsets? margin,
-  }) {
-    if (backgroundColor != null) {
-      this.backgroundColor.value = backgroundColor;
-    }
-    if (radius != null) {
-      this.radius.value = radius;
-    }
-    if (borderWidth != null) {
-      this.borderWidth.value = borderWidth;
-    }
-    if (borderColor != null) {
-      this.borderColor.value = borderColor;
-    }
+  })  : backgroundColor =
+            VarField<Color>.constant(backgroundColor ?? Colors.transparent),
+        _radius = radius ?? MyRadius.constantAll(0) {
     this.backgroundColor.addListener(notifyListeners);
-    this.radius.addListener(notifyListeners);
-    this.borderWidth.addListener(notifyListeners);
-    this.borderColor.addListener(notifyListeners);
-    this.margin =
-        OptionalProperty<EdgeInsets>(margin, listener: notifyListeners);
+    this.radius = radius ?? MyRadius.constantAll(0);
+    this.border = OptionalProperty<MyBorder>(border, listener: notifyListeners);
+    //this.margin = OptionalProperty<EdgeInsets>(margin, listener: notifyListeners);
+  }
+
+  static ElementDecoration get defaultBox => ElementDecoration(
+        backgroundColor: Colors.white,
+        border: MyBorder.defaultBorder,
+      );
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
   }
 
   @override
   void dispose() {
     super.dispose();
+
     backgroundColor.dispose();
-    radius.dispose();
-    borderWidth.dispose();
-    borderColor.dispose();
+
+    border.dispose();
+    //margin.dispose();
   }
 
   void copy(ElementDecoration other) {
     backgroundColor.copy(other.backgroundColor);
-    radius.copy(other.radius);
-    borderWidth.copy(other.borderWidth);
-    borderColor.copy(other.borderColor);
-    margin.value = other.margin.value;
+    radius = other.radius.clone(notifyListeners);
+    border.value = other.border.value?.clone();
+    //margin.value = other.margin.value;
   }
 
   ElementDecoration clone() => ElementDecoration()..copy(this);
+
+  bool equals(ElementDecoration other) {
+    return backgroundColor.value == other.backgroundColor.value &&
+        radius == other.radius &&
+        (border.hasValueNotifier.value == other.border.hasValueNotifier.value &&
+                border.value == null
+            ? true
+            : border.value!.equals(other.border.value!));
+    //&& margin.value == other.margin.value;
+  }
 }

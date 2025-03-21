@@ -25,46 +25,44 @@ class ContainerChildEditor extends StatelessWidget {
   }
 
   factory ContainerChildEditor.from(
-    ElementContainer element, {
+    ElementContainer container, {
     required bool show,
     required double buttonSize,
     void Function(AddDirection direction, {TapUpDetails? details})? onAddChild,
     required Widget Function(UIElement child, int index) builder,
   }) {
-    debugPrint("SingleChildEditor.build ${element.element.id}");
+    debugPrint("SingleChildEditor.build ${container.element.id}");
 
     Widget child(UIElement child, int index) {
       return builder(child, index);
     }
 
     List<Widget> children = [
-      for (int i = 0; i < element.children.length; i++)
-        child(element.children[i], i)
+      for (int i = 0; i < container.children.length; i++)
+        child(container.children[i], i)
     ];
 
-    if (element.type is FlexElementType) {
-      Axis direction = (element.type as FlexElementType).direction;
-      bool axisAutoSize = direction == Axis.vertical
-          ? element.element.height.type == SizeType.auto
-          : element.element.width.type == SizeType.auto;
+    if (container.type is FlexElementType) {
+      Axis direction = (container.type as FlexElementType).direction;
+      bool axisAutoSize = container.element.size.shrinks(axis: direction);
 
       return FlexChildEditor(
         direction,
-        key: ValueKey("${element.hashCode}_c"),
+        key: ValueKey("${container.hashCode}_c"),
         autoSize: axisAutoSize,
         show: show,
         buttonSize: buttonSize,
-        elementWidget: element.type.getWidget(children),
+        elementWidget: container.type.getWidget(children),
         onAddChild: onAddChild,
       );
-    } else if (element.type is SingleChildElementType) {
+    } else if (container.type is SingleChildElementType) {
       return SingleChildEditor(
-        key: ValueKey("${element.hashCode}_c"),
-        autoHeight: element.element.height.type == SizeType.auto,
-        autoWidth: element.element.width.type == SizeType.auto,
+        key: ValueKey("${container.hashCode}_c"),
+        autoHeight: container.element.size.height is ShrinkingSize,
+        autoWidth: container.element.size.width is ShrinkingSize,
         show: show,
         buttonSize: buttonSize,
-        elementWidget: element.type.getWidget(children),
+        elementWidget: container.type.getWidget(children),
         onAddChild: onAddChild,
       );
     }

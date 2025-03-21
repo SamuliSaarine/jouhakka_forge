@@ -47,7 +47,7 @@ class _MyTooltipState extends State<MyTooltip> {
               context,
               clickPosition: offset,
               secondary: true,
-              preferBottom: false,
+              preferAlignment: Alignment.bottomLeft,
               child: _buildTooltip(),
             );
           }

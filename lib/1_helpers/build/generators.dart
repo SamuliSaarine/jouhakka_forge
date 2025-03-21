@@ -18,7 +18,9 @@ class NotifierGenerator extends GeneratorForAnnotation<Notifier> {
     }
 
     final notifyFields = element.fields.where((field) {
-      return field.metadata.any((meta) => meta.element?.name == 'notify');
+      return field.metadata.any((meta) =>
+          meta.element?.name == 'notify' ||
+          meta.element?.name == 'notifyAndForward');
     });
 
     if (notifyFields.isEmpty) {
@@ -34,7 +36,9 @@ class NotifierGenerator extends GeneratorForAnnotation<Notifier> {
         'extension ${element.name}NotifyExtension on ${element.name} {');
 
     for (final field in notifyFields) {
-      buffer.writeln(_generateNotifyFieldCode(field));
+      bool forwardListener = field.metadata
+          .any((meta) => meta.element?.name == 'notifyAndForward');
+      buffer.writeln(_generateNotifyFieldCode(field, forwardListener));
     }
 
     buffer.writeln('}');
@@ -42,7 +46,7 @@ class NotifierGenerator extends GeneratorForAnnotation<Notifier> {
     return buffer.toString();
   }
 
-  String _generateNotifyFieldCode(FieldElement field) {
+  String _generateNotifyFieldCode(FieldElement field, bool forwardListener) {
     final fieldName = field.name;
     final publicName =
         fieldName.startsWith('_') ? fieldName.substring(1) : fieldName;
@@ -53,6 +57,7 @@ class NotifierGenerator extends GeneratorForAnnotation<Notifier> {
       set $publicName($fieldType value) {
         if ($fieldName == value) return;
         $fieldName = value;
+        ${forwardListener ? 'if(value is ChangeNotifier){($fieldName as ChangeNotifier).addListener(notifyListeners)}' : ''}
         notifyListeners();
       }
     ''';

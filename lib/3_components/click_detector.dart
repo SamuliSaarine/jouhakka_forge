@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -127,7 +125,7 @@ class _ClickDetectorState extends State<ClickDetector> {
     }
   }
 
-  void _handleLongPressStart(LongPressStartDetails details) {
+  /*void _handleLongPressStart(LongPressStartDetails details) {
     if (widget.secondaryActionDown != null) {
       TapDownDetails newDetails = TapDownDetails(
           kind: PointerDeviceKind.mouse,
@@ -139,7 +137,7 @@ class _ClickDetectorState extends State<ClickDetector> {
         pressed = true;
       });
     }
-  }
+  }*/
 
   void _handleTapUp(TapUpDetails details) {
     if (widget.primaryActionUp != null) {
@@ -153,7 +151,7 @@ class _ClickDetectorState extends State<ClickDetector> {
     }
   }
 
-  void _handleLongPressEnd(LongPressEndDetails details) {
+  /*void _handleLongPressEnd(LongPressEndDetails details) {
     TapUpDetails translateDetails() => TapUpDetails(
         kind: PointerDeviceKind.mouse,
         globalPosition: details.globalPosition,
@@ -169,7 +167,7 @@ class _ClickDetectorState extends State<ClickDetector> {
         pressed = false;
       });
     }
-  }
+  }*/
 
   void _handleSecondaryTapDown(TapDownDetails details) {
     if (widget.secondaryActionDown != null) {

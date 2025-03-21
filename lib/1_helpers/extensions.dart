@@ -16,6 +16,10 @@ extension AlignmentExtension on Alignment {
     throw UnimplementedError('MouseCursor for $this is not implemented');
   }
 
+  Alignment copy({double? x, double? y}) {
+    return Alignment(x ?? this.x, y ?? this.y);
+  }
+
   TextAlign getTextAlignment() {
     switch (this) {
       case Alignment.topLeft:
@@ -52,5 +56,39 @@ extension AlignmentExtension on Alignment {
         return 2;
     }
     throw UnimplementedError('Ratio for $this is not implemented');
+  }
+}
+
+extension ColorExtension on Color {
+  String _radixFromDouble(double value) {
+    int byte = (value * 255).round();
+    return byte.toRadixString(16).padLeft(2, '0');
+  }
+
+  String toHex() {
+    return _radixFromDouble(r) + _radixFromDouble(g) + _radixFromDouble(b);
+  }
+
+  int toHexInt() {
+    return int.parse('0x${_radixFromDouble(a)}${toHex()}', radix: 16);
+  }
+}
+
+class ColorWithOpacity extends Color {
+  const ColorWithOpacity(int hex, double opacity)
+      : assert(opacity >= 0.0 && opacity <= 1.0,
+            'Opacity must be between 0.0 and 1.0'),
+        super.from(
+            alpha: opacity,
+            red: ((hex >> 16) & 0xFF) / 255.0,
+            green: ((hex >> 8) & 0xFF) / 255.0,
+            blue: (hex & 0xFF) / 255.0);
+}
+
+extension DoubleExtension on double {
+  String toPrecisionOf2() {
+    if (this % 1 == 0) return toString();
+    if (this % 10 == 0) return toStringAsFixed(1);
+    return toStringAsFixed(2);
   }
 }

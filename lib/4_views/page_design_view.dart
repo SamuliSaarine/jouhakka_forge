@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
@@ -17,6 +18,7 @@ import 'package:jouhakka_forge/3_components/state_management/value_listener.dart
 import 'package:jouhakka_forge/3_components/text_field.dart';
 import 'package:jouhakka_forge/4_views/inspector_view.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
+import 'package:jouhakka_forge/5_style/textstyles.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 part "page_design_view_extension.dart";
@@ -58,8 +60,8 @@ class _PageDesignViewState extends State<PageDesignView> {
     myNode.requestFocus();
 
     widget.page.body
-      ..width.fixed(resolution.width)
-      ..height.fixed(resolution.height);
+      ..size.width = ControlledSize.constant(resolution.width)
+      ..size.height = ControlledSize.constant(resolution.height);
 
     _bodyKey = GlobalKey();
 
@@ -85,8 +87,8 @@ class _PageDesignViewState extends State<PageDesignView> {
 
   void _pageInit() {
     widget.page.body
-      ..width.fixed(resolution.width)
-      ..height.fixed(resolution.height);
+      ..size.height = ControlledSize.constant(resolution.width)
+      ..size.width = ControlledSize.constant(resolution.height);
     _bodyKey = GlobalKey();
   }
 
@@ -130,7 +132,7 @@ class _PageDesignViewState extends State<PageDesignView> {
   }
 
   Widget _canvas() {
-    Resolution res = body.getResolution() ?? resolution;
+    Resolution res = body.size.getResolution() ?? resolution;
     return InteractiveCanvasView(
       canvasResolution: res,
       onViewTap: () {
@@ -267,10 +269,12 @@ class _PageDesignViewState extends State<PageDesignView> {
   Widget _bottomRightBar() {
     Widget resNumberEditor() {
       if (_widthController.text != resolution.width.toString()) {
-        _widthController.text = "${body.width.value ?? resolution.width}";
+        _widthController.text =
+            "${body.size.constantWidth ?? resolution.width}";
       }
       if (_heightController.text != resolution.height.toString()) {
-        _heightController.text = "${body.height.value ?? resolution.height}";
+        _heightController.text =
+            "${body.size.constantHeight ?? resolution.height}";
       }
       return Padding(
         padding: const EdgeInsets.only(left: 8.0, right: 4.0),
@@ -283,7 +287,7 @@ class _PageDesignViewState extends State<PageDesignView> {
               child: MyNumberField<int>(
                 controller: _widthController,
                 hintText: "Width",
-                textColor: MyColors.light,
+                textStyle: MyTextStyles.lightBody,
                 onChanged: (value) {
                   if (value < 10) return;
 
@@ -299,7 +303,7 @@ class _PageDesignViewState extends State<PageDesignView> {
               child: MyNumberField<int>(
                 controller: _heightController,
                 hintText: "Height",
-                textColor: MyColors.light,
+                textStyle: MyTextStyles.lightBody,
                 onChanged: (value) {
                   if (value < 10) return;
                   _updateResolution(Resolution(

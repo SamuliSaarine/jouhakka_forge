@@ -9,3 +9,9 @@ class Notify {
 }
 
 const Notify notify = Notify();
+
+class NotifyAndForward extends Notify {
+  const NotifyAndForward();
+}
+
+const NotifyAndForward notifyAndForward = NotifyAndForward();

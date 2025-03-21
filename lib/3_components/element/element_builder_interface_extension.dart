@@ -2,26 +2,26 @@ part of 'element_builder_interface.dart';
 
 extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
   void _primaryAction(TapUpDetails details) {
-    if (HardwareKeyboard.instance.isShiftPressed) {
+    if (HardwareKeyboard.instance.isShiftPressed && element is BranchElement) {
       AddDirection? direction = _calculateDirection(details.localPosition);
-      debugPrint(direction.toString());
-      onAddChild(
+      //debugPrint("Direction: $direction");
+      (element as BranchElement).addElement(
         null,
         direction,
       );
     } else if (Session.selectedElement.value == element) {
-      debugPrint(_calculateDirection(details.localPosition).toString());
+      //debugPrint("Direction: ${_calculateDirection(details.localPosition)}");
     } else {
       Session.selectedElement.value = element;
     }
   }
 
   void _secondaryAction(TapDownDetails details) async {
-    if (HardwareKeyboard.instance.isShiftPressed) {
+    if (HardwareKeyboard.instance.isShiftPressed && element is BranchElement) {
       AddDirection? direction = _calculateDirection(details.localPosition);
       UIElementType? type = await _pickChild(details.globalPosition);
       if (type != null) {
-        onAddChild(type, direction);
+        (element as BranchElement).addElement(type, direction);
       }
     } else {
       ContextMenu.open(
@@ -29,36 +29,38 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
         details.globalPosition,
         [
           //New element
-          ContextMenuItem("New element", action: () {
-            AddDirection? direction =
-                _calculateDirection(details.localPosition);
-            onAddChild(null, direction);
-          }),
+          if (element is BranchElement)
+            ContextMenuItem("New element", action: (_) {
+              AddDirection? direction =
+                  _calculateDirection(details.localPosition);
+              (element as BranchElement).addElement(null, direction);
+            }),
           //Pick element
-          ContextMenuItem("Pick element", action: () async {
-            AddDirection? direction =
-                _calculateDirection(details.localPosition);
-            UIElementType? type = await _pickChild(details.globalPosition);
-            if (type != null) {
-              onAddChild(type, direction);
-            }
-          }),
+          if (element is BranchElement)
+            ContextMenuItem("Pick element", action: (details) async {
+              AddDirection? direction =
+                  _calculateDirection(details.localPosition);
+              UIElementType? type = await _pickChild(details.globalPosition);
+              if (type != null) {
+                (element as BranchElement).addElement(type, direction);
+              }
+            }),
           //Wrap element
-          ContextMenuItem("Wrap with empty", action: () {
+          ContextMenuItem("Wrap with empty", action: (details) {
             onWrap(false);
           }),
-          ContextMenuItem("Wrap with box", action: () {
+          ContextMenuItem("Wrap with box", action: (details) {
             onWrap(true);
           }),
           //Replace element
-          ContextMenuItem("Replace element", action: () async {
+          ContextMenuItem("Replace element", action: (details) async {
             UIElementType? type = await _pickChild(details.globalPosition);
             if (type != null) {
               onReplace(type);
             }
           }),
           //Delete
-          ContextMenuItem("Delete", action: () {
+          ContextMenuItem("Delete", action: (details) {
             if (element.parent == null) {
               debugPrint("Cannot delete element without parent");
               return;
@@ -91,46 +93,6 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     if (pickedElement == null) return null;
 
     return pickedElement;
-  }
-
-  void onAddChild(UIElementType? type, AddDirection? direction) {
-    if (element is! BranchElement) {
-      if (kDebugMode) {
-        throw Exception("Cannot add child to non-branch element");
-      }
-      return;
-    }
-
-    if (element is ElementContainer) {
-      ElementContainer containerElement = element as ElementContainer;
-      if (containerElement.type is SingleChildElementType) {
-        containerElement.changeContainerType(
-            FlexElementType(direction?.axis ?? Axis.vertical));
-      }
-      childKeys.add(GlobalKey());
-      UIElement? pickedElement;
-      if (type != null) {
-        pickedElement = UIElement.fromType(
-            type, containerElement.element.root, containerElement);
-      }
-      if (pickedElement == null) {
-        if (containerElement.children.isEmpty) {
-          pickedElement = BranchElement.defaultBox(
-              containerElement.element.root,
-              parent: containerElement);
-        } else {
-          pickedElement = containerElement.children.last.clone();
-        }
-      }
-      containerElement.addChild(
-        pickedElement,
-      );
-    } else {
-      type ??= UIElementType.box;
-
-      childKeys.add(GlobalKey()); //TODO: Handle using childNotifier instead
-      //TODO: Make sure that UI is updated properly
-    }
   }
 
   void _onPointerEvent(PointerEvent event) {
@@ -182,13 +144,8 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     BranchElement wrap = BranchElement(
       root: element.root,
       parent: element.parent,
+      decoration: decorate ? ElementDecoration.defaultBox : null,
     );
-    if (decorate) {
-      wrap.decoration.value = ElementDecoration()
-        ..backgroundColor.value = Colors.white
-        ..borderColor.value = Colors.black
-        ..borderWidth.value = 1;
-    }
     widget.onBodyChanged(wrap, widget.index);
   }
 
@@ -206,8 +163,8 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
       return null;
     }
     double extra = 0;
-    double width = element.width.value!;
-    double height = element.height.value!;
+    double width = element.size.width.renderValue!;
+    double height = element.size.height.renderValue!;
     if (Session.extraPadding.value) {
       extra = sqrt(min(width, height));
     }
@@ -217,13 +174,13 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     Alignment alignment = container.type is SingleChildElementType
         ? (container.type as SingleChildElementType).alignment
         : Alignment.center;
-    double childWidth =
-        container.children.first.width.value ?? element.width.value!;
-    double childHeight =
-        container.children.first.height.value ?? element.height.value!;
+    double childWidth = container.children.first.size.width.renderValue ??
+        element.size.width.renderValue!;
+    double childHeight = container.children.first.size.height.renderValue ??
+        element.size.height.renderValue!;
 
     // Get padding
-    EdgeInsets padding = container.padding;
+    EdgeInsets padding = container.padding.padding;
     double top = max(padding.top, extra);
     double bottom = max(padding.bottom, extra);
     double left = max(padding.left, extra);
@@ -310,20 +267,18 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
       Alignment childScaleAlignment = solveScaleAlignment();
 
       try {
-        if (childKeys.length <= index) {
-          childKeys.add(GlobalKey());
-          debugPrint("Key was not initialized properly");
-        }
+        assert(childKeys.containsKey(child.id),
+            "Child keys are not updated properly");
 
         Axis? flexDirection = containerElement.type is FlexElementType
             ? (containerElement.type as FlexElementType).direction
             : null;
 
         bool expandChild =
-            flexDirection != null && child.expands(axis: flexDirection);
+            flexDirection != null && child.size.expands(axis: flexDirection);
 
         Widget interface = ElementBuilderInterface(
-          globalKey: childKeys[index], // ValueKey("${child.hashCode}_i"),
+          globalKey: childKeys[child.id]!, // ValueKey("${child.hashCode}_i"),
           element: child,
           index: index,
           scaleAlignment: childScaleAlignment,
@@ -332,6 +287,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
         );
 
         if (expandChild) {
+          //TODO: Implement flex
           return Expanded(
             child: interface,
           );

@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
-import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
+import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:jouhakka_forge/4_views/page_design_view.dart';
 import '../../3_components/element/ui_element_component.dart';
 
@@ -15,7 +15,7 @@ class ElementContainer extends ChangeNotifier {
 
   /// List of [UIElement]s that are direct children of this container.
   final List<UIElement> children = [];
-  final ValueNotifier<int> childNotifier = ValueNotifier(1);
+  final ChangeNotifier childNotifier = ChangeNotifier();
 
   /// Specifies how the [ElementContainer] acts and is displayed.
   ElementContainerType _type;
@@ -26,10 +26,17 @@ class ElementContainer extends ChangeNotifier {
     _type.notifyListeners();
   }
 
-  EdgeInsets _padding = EdgeInsets.zero;
-  EdgeInsets get padding => _padding;
-  set padding(EdgeInsets value) {
+  MyPadding _padding = MyPadding.zero;
+  MyPadding get padding => _padding;
+  set padding(MyPadding value) {
     _padding = value;
+    notifyListeners();
+  }
+
+  ContentOverflow _overflow = ContentOverflow.clip;
+  ContentOverflow get overflow => _overflow;
+  set overflow(ContentOverflow value) {
+    _overflow = value;
     notifyListeners();
   }
 
@@ -43,6 +50,19 @@ class ElementContainer extends ChangeNotifier {
     for (UIElement child in children) {
       addChild(child);
     }
+  }
+
+  ElementContainer.singleChildFromType({
+    required this.element,
+    required UIElementType childType,
+  }) : _type = SingleChildElementType() {
+    _type.addListener(notifyListeners);
+    addChild(UIElement.fromType(childType, element.root, this));
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
   }
 
   void addChild(UIElement child) {
@@ -63,7 +83,7 @@ class ElementContainer extends ChangeNotifier {
       }
     }*/
     children.add(child);
-    childNotifier.value++;
+    childNotifier.notifyListeners();
   }
 
   void removeChild(UIElement child) {
@@ -75,9 +95,9 @@ class ElementContainer extends ChangeNotifier {
       type = SingleChildElementType();
     } else if (children.isEmpty) {
       element.content.value = null;
-      dispose();
+      return;
     }
-    childNotifier.value--;
+    childNotifier.notifyListeners();
   }
 
   void reorderChild(int oldIndex, int newIndex) {
@@ -105,7 +125,6 @@ class ElementContainer extends ChangeNotifier {
 
   //TODO: Used only in play mode, test this when play mode is implemented
   /// Returns the content of the container.
-  @override
   Widget? getContent() {
     if (children.isEmpty) return null;
     if (children.length == 1) {
@@ -122,10 +141,9 @@ class ElementContainer extends ChangeNotifier {
         )
         .toList();
     if (type is FlexElementType) {
-      AxisSize axisSize = (type as FlexElementType).direction == Axis.horizontal
-          ? element.width
-          : element.height;
-      bool hugContent = axisSize.type == SizeType.auto;
+      AxisSize axisSize =
+          element.size.getAxis((type as FlexElementType).direction);
+      bool hugContent = axisSize is AutomaticSize;
       return (type as FlexElementType).getWidget(
         widgetChildren,
         mainAxisSize: hugContent ? MainAxisSize.min : MainAxisSize.max,
@@ -159,6 +177,8 @@ class ElementContainer extends ChangeNotifier {
 
   String get label => type.label;
 }
+
+enum ContentOverflow { allow, clip, horizontalScroll, verticalScroll }
 
 @notifier
 abstract class ElementContainerType extends ChangeNotifier {
@@ -246,7 +266,7 @@ class FlexElementType extends ElementContainerType {
   Axis _direction = Axis.vertical;
 
   @notify
-  MainAxisAlignment _mainAxisAlignment = MainAxisAlignment.start;
+  MainAxisAlignment _mainAxisAlignment = MainAxisAlignment.spaceEvenly;
 
   @notify
   CrossAxisAlignment _crossAxisAlignment = CrossAxisAlignment.start;

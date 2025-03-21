@@ -1,10 +1,9 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/layout/my_tooltip.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
 
-class MyIconButton extends StatefulWidget {
+class MyIconButton extends StatelessWidget {
   /// Short tap or left click up
   final Function(TapUpDetails details) primaryAction;
 
@@ -14,6 +13,7 @@ class MyIconButton extends StatefulWidget {
   final String tooltip;
   final double? _size;
   final bool isSelected;
+  final bool isEnabled;
   final MyIconButtonDecoration decoration;
 
   double get size => _size ?? decoration.size;
@@ -36,6 +36,9 @@ class MyIconButton extends StatefulWidget {
     /// If you want to override icon size given in the decoration
     double? size,
 
+    /// If false, the button is disabled and doesn't react to any input
+    this.isEnabled = true,
+
     /// Visual settings for the button
     this.decoration = const MyIconButtonDecoration(),
 
@@ -43,19 +46,51 @@ class MyIconButton extends StatefulWidget {
     this.isSelected = false,
   }) : _size = size;
 
-  @override
-  State<MyIconButton> createState() => _MyIconButtonState();
-}
-
-class _MyIconButtonState extends State<MyIconButton> {
-  bool _isPressed = false;
-  bool _isHover = false;
-  MyIconButtonDecoration get d => widget.decoration;
+  //bool _isPressed = false;
+  MyIconButtonDecoration get d => decoration;
 
   @override
   Widget build(BuildContext context) {
     // Handle hover events
-    return MouseRegion(
+    Widget current = ClickDetector(
+      primaryActionUp: (details) => primaryAction(details),
+      secondaryActionUp: (details) {
+        if (secondaryAction != null) {
+          secondaryAction!(details);
+        }
+      },
+      builder: (hovering, pressed) => Container(
+        padding: EdgeInsets.all(d.padding),
+        decoration: BoxDecoration(
+          color: d.backgroundColor.getColor(pressed || isSelected, hovering),
+          borderRadius: BorderRadius.circular(d.borderRadius),
+          border: d.borderWidth == 0 || d.borderColor == null
+              ? null
+              : Border.all(
+                  color:
+                      d.borderColor!.getColor(pressed || isSelected, hovering),
+                  width: d.borderWidth,
+                ),
+        ),
+        child: Icon(
+          icon,
+          size: size,
+          color:
+              d.iconColor.getColor(pressed || isSelected, hovering, !isEnabled),
+        ),
+      ),
+    );
+
+    if (tooltip.isEmpty) {
+      return current;
+    }
+
+    return MyTooltip(
+      tooltip,
+      child: current,
+    );
+
+    /*return MouseRegion(
       cursor: SystemMouseCursors.click,
       opaque: false,
       onEnter: (_) => startHover(),
@@ -104,23 +139,7 @@ class _MyIconButtonState extends State<MyIconButton> {
           ),
         ),
       ),
-    );
-  }
-
-  void startPress() {
-    setState(() => _isPressed = true);
-  }
-
-  void endPress() {
-    setState(() => _isPressed = false);
-  }
-
-  void startHover() {
-    setState(() => _isHover = true);
-  }
-
-  void endHover() {
-    setState(() => _isHover = false);
+    );*/
   }
 }
 
@@ -129,6 +148,9 @@ class MyIconButtonDecoration {
 
   final InteractiveColorSettings iconColor;
   final InteractiveColorSettings backgroundColor;
+
+  final InteractiveColorSettings? borderColor;
+  final double borderWidth;
 
   final double borderRadius;
   final double padding;
@@ -150,6 +172,12 @@ class MyIconButtonDecoration {
 
     /// Padding between the icon and the borders of the container
     this.padding = 2.0,
+
+    /// Interactive color settings for the border
+    this.borderColor,
+
+    /// Width of the border
+    this.borderWidth = 0.0,
   });
 
   /// Copy other [MyIconButtonDecoration] with some values overridden
@@ -178,10 +206,39 @@ class MyIconButtonDecoration {
     );
   }
 
-  static const MyIconButtonDecoration onDarkBar8 = MyIconButtonDecoration(
-    iconColor: InteractiveColorSettings(color: Colors.white),
+  static const MyIconButtonDecoration onLightBackground =
+      MyIconButtonDecoration(
+    iconColor: InteractiveColorSettings(
+      color: MyColors.slate,
+      hoverColor: MyColors.dark,
+      selectedColor: MyColors.darkMint,
+    ),
     borderRadius: 0,
-    backgroundColor: _defaultBackground,
+    backgroundColor: InteractiveColorSettings(
+      color: Colors.transparent,
+    ),
+    padding: 2,
+  );
+
+  static const MyIconButtonDecoration onDarkBar6 = MyIconButtonDecoration(
+    iconColor: InteractiveColorSettings(
+        color: Colors.white,
+        hoverColor: MyColors.lightMint,
+        selectedColor: MyColors.lightMint),
+    borderRadius: 0,
+    backgroundColor: _transparentWhenSelected,
+    padding: 6,
+  );
+
+  static const MyIconButtonDecoration onDarkBar8 = MyIconButtonDecoration(
+    iconColor: InteractiveColorSettings(
+      color: Colors.white,
+      hoverColor: MyColors.lightMint,
+      selectedColor: MyColors.lightMint,
+      disabledColor: MyColors.strongDifference,
+    ),
+    borderRadius: 0,
+    backgroundColor: _transparentWhenSelected,
     padding: 8,
   );
 
@@ -190,6 +247,12 @@ class MyIconButtonDecoration {
     borderRadius: 0,
     backgroundColor: _strongBackground,
     padding: 12,
+  );
+
+  static const _transparentWhenSelected = InteractiveColorSettings(
+    color: Colors.transparent,
+    hoverColor: MyColors.mildDifference,
+    selectedColor: Colors.transparent,
   );
 
   static const _defaultBackground = InteractiveColorSettings(
@@ -208,16 +271,20 @@ class InteractiveColorSettings {
   final Color color;
   final Color? selectedColor;
   final Color? hoverColor;
+  final Color? disabledColor;
 
   /// Color settings for interactive widgets
   const InteractiveColorSettings({
     required this.color,
     this.selectedColor,
     this.hoverColor,
+    this.disabledColor,
   });
 
-  Color getColor(bool isPressed, bool isHover) {
-    if (isPressed && selectedColor != null) {
+  Color getColor(bool isPressed, bool isHover, [bool isDisabled = false]) {
+    if (isDisabled && disabledColor != null) {
+      return disabledColor!;
+    } else if (isPressed && selectedColor != null) {
       return selectedColor!;
     } else if (isHover && hoverColor != null) {
       return hoverColor!;

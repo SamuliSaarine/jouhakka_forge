@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/layout/my_interactive_viewer.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
 
 // Requirements:
 // - The view should be interactive and allow zooming and panning.
@@ -68,8 +69,8 @@ class _InteractiveCanvasViewState extends State<InteractiveCanvasView> {
           });*/
         }
 
-        return ColoredBox(
-          color: const Color.fromARGB(255, 194, 208, 207),
+        return DecoratedBox(
+          decoration: const BoxDecoration(color: MyColors.mintgray),
           child: GestureDetector(
             onTap: () {
               debugPrint("Canvas Tapped");

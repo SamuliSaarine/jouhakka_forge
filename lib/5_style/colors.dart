@@ -1,20 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/1_helpers/extensions.dart';
 
 class MyColors {
   static ValueNotifier<bool> darkMode = ValueNotifier(false);
   static bool get _isDark => darkMode.value;
 
-  static const Color light = Color.fromARGB(255, 250, 250, 250);
-  static const Color lightGray = Color.fromARGB(255, 233, 255, 250);
-  static const Color semilightGray = Color.fromARGB(255, 220, 220, 220);
-  static const Color dark = Color.fromARGB(255, 25, 27, 29);
+  static const int _light = 0xFFFAFAFA;
+  static const Color light = Color(_light);
+  static const ColorWithOpacity light75 = ColorWithOpacity(_light, 0.75);
+  static const ColorWithOpacity light25 = ColorWithOpacity(_light, 0.25);
 
-  static const Color darkerCharcoal = Color.fromARGB(255, 34, 43, 47);
-  static const Color lighterCharcoal = Color.fromARGB(255, 66, 88, 96);
+  static const int _dark = 0xFF191B1D;
+  static const Color dark = Color(_dark);
+  static const ColorWithOpacity dark60 = ColorWithOpacity(_dark, 0.6);
+  static const ColorWithOpacity dark40 = ColorWithOpacity(_dark, 0.4);
 
-  static const Color mint = Color.fromARGB(255, 0, 184, 148);
-  static const Color lightMint = Color.fromARGB(255, 243, 248, 248);
-  static const Color mintgray = Color.fromARGB(255, 228, 238, 233);
+  static const int _slateHex = 0xFF27353C;
+  static const Color slate = Color(_slateHex);
+  static const Color slate80 = ColorWithOpacity(_slateHex, 0.8);
+  static const Color slate60 = ColorWithOpacity(_slateHex, 0.6);
+
+  static const int _stormHex = 0xFF67797D;
+  static const Color storm = Color(_stormHex);
+  static const Color storm50 = ColorWithOpacity(_stormHex, 0.5);
+  static const Color storm30 = ColorWithOpacity(_stormHex, 0.3);
+  static const Color storm12 = ColorWithOpacity(_stormHex, 0.12);
+
+  static const int _lightMint = 0xFF00FFB7;
+  static const int _darkMint = 0xFF1CD19E;
+  static const Color lightMint = Color(_lightMint);
+  static const Color darkMint = Color(_darkMint);
+  static const Color mintgray = Color(0xFF8EC2B3);
 
   static const Color lighterBlue = Color.fromARGB(255, 23, 142, 211);
   static const Color darkerBlue = Color.fromARGB(255, 0, 122, 184);
@@ -23,9 +39,9 @@ class MyColors {
   static const Color mediumDifference = Color.fromRGBO(128, 128, 128, 0.2);
   static const Color strongDifference = Color.fromRGBO(128, 128, 128, 0.3);
 
-  static Color get charcoal => _isDark ? lighterCharcoal : darkerCharcoal;
+  static Color get charcoal => _isDark ? storm : slate;
 
-  static Color get mintOrCoal => _isDark ? darkerCharcoal : mintgray;
+  static Color get mintOrCoal => _isDark ? slate : mintgray;
 
   static Color get background => _isDark ? dark : light;
 

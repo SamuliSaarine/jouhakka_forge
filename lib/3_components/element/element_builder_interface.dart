@@ -1,9 +1,8 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
+import 'package:jouhakka_forge/1_helpers/element_helper.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
@@ -14,7 +13,6 @@ import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
-import 'package:jouhakka_forge/3_components/layout/element_selector_list.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 
 part 'element_builder_interface_extension.dart';
@@ -50,11 +48,11 @@ class ElementBuilderInterface extends StatefulWidget {
 class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   UIElement get element => widget.element;
   late GlobalKey globalKey;
-  final List<GlobalKey> childKeys = [];
+  final Map<String, GlobalKey> childKeys = {};
   bool _isSelected = false;
   bool _isHovering = false;
-  late SizeType _lastWidthType;
-  late SizeType _lastHeightType;
+  late Type _lastWidthType;
+  late Type _lastHeightType;
 
   @override
   void initState() {
@@ -86,39 +84,66 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   }
 
   void elementInit() {
-    if (element is ElementContainer) {
-      ElementContainer containerElement = element as ElementContainer;
-      for (int i = 0; i < containerElement.children.length; i++) {
-        childKeys.add(GlobalKey());
-      }
-      (element as ElementContainer).childNotifier.addListener(() {
-        setState(() {});
-      });
+    initElementContainer();
+    if (element is BranchElement) {
+      (element as BranchElement)
+          .content
+          .hasValueNotifier
+          .addListener(initElementContainer);
     }
 
-    _lastWidthType = element.width.type;
-    _lastHeightType = element.height.type;
+    _lastWidthType = element.size.width.runtimeType;
+    _lastHeightType = element.size.height.runtimeType;
     element.addListener(updateOnChange);
+  }
+
+  void initElementContainer() {
+    ElementContainer? container = element.tryGetContainer();
+    if (container != null) {
+      for (var e in container.children) {
+        childKeys[e.id] = GlobalKey();
+      }
+      container.childNotifier.addListener(_onChildrenChanged);
+    } else {
+      childKeys.clear();
+    }
   }
 
   void elementDispose() {
     element.removeListener(updateOnChange);
-    if (element is ElementContainer) {
-      childKeys.clear();
-      (element as ElementContainer).childNotifier.removeListener(() {
-        setState(() {});
-      });
+    if (element is BranchElement) {
+      (element as BranchElement)
+          .content
+          .hasValueNotifier
+          .removeListener(initElementContainer);
+      ElementContainer? container = element.tryGetContainer();
+      if (container != null) {
+        childKeys.clear();
+        container.childNotifier.removeListener(_onChildrenChanged);
+      }
     }
   }
 
+  void _onChildrenChanged() {
+    Map<String, GlobalKey> oldKeys = childKeys;
+    childKeys.clear();
+    assert((element as BranchElement).content.value != null,
+        "Changed children without value");
+
+    for (var e in (element as BranchElement).content.value!.children) {
+      childKeys[e.id] = oldKeys[e.id] ?? GlobalKey();
+    }
+
+    setState(() {});
+  }
+
   void updateOnChange() {
-    if (element.width.type != _lastWidthType ||
-        element.height.type != _lastHeightType) {
-      _lastWidthType = element.width.type;
-      _lastHeightType = element.height.type;
+    if (element.size.width.runtimeType != _lastWidthType ||
+        element.size.height.runtimeType != _lastHeightType) {
+      _lastWidthType = element.size.width.runtimeType;
+      _lastHeightType = element.size.height.runtimeType;
       widget.onBodyChanged(element, widget.index);
     } else {
-      //debugPrint("Setting state on change");
       setState(() {});
     }
   }
@@ -129,9 +154,9 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
     //source: element,
     // builder: () {
 
-    Widget? contentOverride = element is ElementContainer
-        ? _containerOverride(element as ElementContainer)
-        : null;
+    ElementContainer? container = element.tryGetContainer();
+    Widget? contentOverride =
+        container != null ? _containerOverride(container) : null;
 
     try {
       Widget current = ElementWidget(
@@ -146,8 +171,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
       try {
         return SizedBox(
-          width: element.width.tryGetFixed(),
-          height: element.height.tryGetFixed(),
+          width: element.size.constantWidth,
+          height: element.size.constantHeight,
           child: ClickDetector(
             opaque: true,
             onPointerEvent: _onPointerEvent,
@@ -176,8 +201,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   Widget _editors(bool contentOverridden) {
     return Positioned.fill(
       child: SizedBox(
-        width: element.width.value,
-        height: element.height.value,
+        width: element.size.width.renderValue,
+        height: element.size.height.renderValue,
         child: ValueListener(
           source: Session.hoveredElement,
           condition: (value) {
@@ -221,8 +246,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
   Widget _scaleBox() {
     Alignment alignment = widget.scaleAlignment!;
-    double size =
-        sqrt(min(element.width.value ?? 400, element.height.value ?? 400));
+    double size = sqrt(min(element.size.width.renderValue ?? 400,
+        element.size.height.renderValue ?? 400));
     //debugPrint("Size: $size | ${alignment.ratio}");
     return Align(
       alignment: alignment,
@@ -241,24 +266,26 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
             Offset localDelta =
                 details.delta * Session.zoom.clamp(1, 3); // / 2 + 0.5);
             if (alignment != Alignment.centerRight) {
-              if ((element.height.value ?? 2) < 1 && localDelta.dy < 0) {
+              if ((element.size.height.renderValue ?? 2) < 1 &&
+                  localDelta.dy < 0) {
                 debugPrint("Height too small");
                 return;
               }
 
-              element.height.add(localDelta.dy.ceilToDouble());
+              element.size.addHeight(localDelta.dy.ceilToDouble());
             }
 
             if (alignment == Alignment.bottomCenter) {
               return;
             }
 
-            if ((element.width.value ?? 2) < 1 && localDelta.dx < 0) {
+            if ((element.size.width.renderValue ?? 2) < 1 &&
+                localDelta.dx < 0) {
               debugPrint("Width too small");
               return;
             }
 
-            element.width.add(localDelta.dx.roundToDouble());
+            element.size.addWidth(localDelta.dx.roundToDouble());
           },
           onPanEnd: (details) {
             debugPrint("Resetting cursor");
