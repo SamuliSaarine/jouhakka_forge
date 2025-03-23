@@ -9,6 +9,7 @@ import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_text_button.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/branch_inspector_modules.dart';
+import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:jouhakka_forge/3_components/layout/context_popup.dart';
 import 'package:jouhakka_forge/3_components/layout/floating_bar.dart'
     show FloatingBar, FloatingBarDecoration;
@@ -138,23 +139,21 @@ extension SizeEditor on SizeHolder {
                     ],
                   ),
                 ),
-                if (axisSize.renderValue != null) ...[
-                  Gap.w16,
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      border: Border.all(color: MyColors.storm),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      axisSize.renderValue?.toPrecisionOf2() ?? "unknown",
-                      style: MyTextStyles.smallTip,
-                    ),
+                Gap.w16,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border.all(color: MyColors.storm),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  Gap.w16,
-                ],
+                  child: Text(
+                    axisSize.renderValue?.toPrecisionOf2() ?? "unknown",
+                    style: MyTextStyles.smallTip,
+                  ),
+                ),
+                Gap.w16,
               ],
             ),
             Gap.h4,
@@ -273,7 +272,7 @@ extension SizeEditor on SizeHolder {
           widthControllers = _SizeControllerSet(width);
           heightControllers = _SizeControllerSet(height);
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.all(6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -535,127 +534,6 @@ extension AlignmentEditor on Alignment {
   }
 }
 
-extension AxisSizeEditor on AxisSizeOld {
-  Widget getEditor(String title) {
-    final TextEditingController valueController =
-        TextEditingController(text: value != null ? value!.toString() : "");
-    final TextEditingController minController = TextEditingController(
-        text: minPixels != null ? minPixels!.toString() : "");
-    final TextEditingController maxController = TextEditingController(
-        text: maxPixels != null ? maxPixels!.toString() : "");
-    final TextEditingController flexController =
-        TextEditingController(text: flex != null ? flex!.toString() : "");
-
-    return ChangeListener(
-      source: this,
-      builder: () {
-        if (valueController.text != value.toString()) {
-          valueController.text = value.toString();
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("$title:",
-                style: const TextStyle(
-                    fontSize: 12,
-                    color: MyColors.storm,
-                    fontWeight: FontWeight.w700)),
-            Gap.h2,
-            Row(
-              children: [
-                Expanded(
-                  child: MyNumberField<double>(
-                      controller: valueController,
-                      hintText: "$title in pixels",
-                      onChanged: (value) => fixed(value)),
-                ),
-                Gap.w8,
-                //MyIconButtons for auto, expand, fixed
-                FloatingBar(
-                  decoration: FloatingBarDecoration.flatLightMode,
-                  children: [
-                    MyIconButton(
-                        icon: LucideIcons.shrink,
-                        tooltip: "Auto",
-                        size: 14,
-                        isSelected: type == SizeType.auto,
-                        decoration: MyIconButtonDecoration.onDarkBar8,
-                        primaryAction: (_) {
-                          auto();
-                        }),
-                    MyIconButton(
-                        icon: LucideIcons.expand,
-                        tooltip: "Expand",
-                        size: 14,
-                        isSelected: type == SizeType.expand,
-                        decoration: MyIconButtonDecoration.onDarkBar8,
-                        primaryAction: (_) {
-                          expand();
-                        }),
-                    MyIconButton(
-                      icon: LucideIcons.ruler,
-                      tooltip: "Fixed",
-                      size: 14,
-                      isSelected: type == SizeType.fixed,
-                      decoration: MyIconButtonDecoration.onDarkBar8,
-                      primaryAction: (_) {
-                        if (value != null) {
-                          fixed(value!);
-                        } else {
-                          debugPrint("Value is null");
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            //Min, max and if expand, flex
-            if (type != SizeType.fixed) ...[
-              Gap.h8,
-              Row(
-                children: [
-                  Expanded(
-                    child: MyNumberField<double>(
-                      controller: minController,
-                      hintText: "Min",
-                      onChanged: (value) {
-                        minPixels = value;
-                      },
-                    ),
-                  ),
-                  Gap.w4,
-                  Expanded(
-                    child: MyNumberField<double>(
-                      controller: maxController,
-                      hintText: "Max",
-                      onChanged: (value) {
-                        maxPixels = value;
-                      },
-                    ),
-                  ),
-                  if (type == SizeType.expand) ...[
-                    Gap.w4,
-                    Expanded(
-                      child: MyNumberField<int>(
-                        controller: flexController,
-                        hintText: "Flex",
-                        onChanged: (value) {
-                          flex = value;
-                        },
-                      ),
-                    ),
-                  ]
-                ],
-              ),
-            ]
-          ],
-        );
-      },
-    );
-  }
-}
-
 extension OptionalPropertyEditor<T> on OptionalProperty<T> {
   Widget getEditor(
     BuildContext context,
@@ -727,11 +605,12 @@ extension MyPaddingEditor on MyPadding {
         TextEditingController(text: right.toString());
 
     return StatefulBuilder(builder: (contex, setState) {
-      void changePadding(
-          {Variable<double>? top,
-          Variable<double>? bottom,
-          Variable<double>? left,
-          Variable<double>? right}) {
+      void changePadding({
+        Variable<double>? top,
+        Variable<double>? bottom,
+        Variable<double>? left,
+        Variable<double>? right,
+      }) {
         Variable<double>? all = (selectHorizontal && selectVertical)
             ? top ?? bottom ?? left ?? right
             : null;
@@ -892,4 +771,89 @@ class AddPropertiesEditor extends StatelessWidget {
       primaryAction: (_) => action(),
     );
   }
+}
+
+class EnumEditor<T extends Enum> extends StatefulWidget {
+  final int maxlength;
+  final T selectedValue;
+  final List<(T value, IconData icon, String label)> options;
+  final void Function(T) onChanged;
+
+  const EnumEditor({
+    super.key,
+    required this.selectedValue,
+    this.maxlength = 4,
+    required this.onChanged,
+    required this.options,
+  });
+
+  @override
+  State<EnumEditor<T>> createState() => _EnumEditorState<T>();
+}
+
+class _EnumEditorState<T extends Enum> extends State<EnumEditor<T>> {
+  @override
+  Widget build(BuildContext context) {
+    bool overflow = widget.options.length > widget.maxlength;
+    int length = overflow ? widget.maxlength : widget.options.length;
+
+    return FloatingBar(
+      decoration: FloatingBarDecoration.flatLightMode,
+      children: [
+        for (int i = 0; i < length; i++) ...[
+          if (i != 0) SizedBox(height: 24, child: MyDividers.lightVertical),
+          Expanded(
+            child: optionButton(i),
+          ),
+          if (overflow && i == length - 1) ...[
+            SizedBox(height: 24, child: MyDividers.lightVertical),
+            MyIconButton(
+              icon: LucideIcons.ellipsis,
+              size: 20,
+              tooltip: "More options",
+              decoration: MyIconButtonDecoration.onDarkBar8.copyWith(
+                  iconColor: InteractiveColorSettings(
+                color: MyColors.storm,
+                hoverColor: MyColors.light,
+              )),
+              primaryAction: (details) {
+                ContextPopup.open(
+                  context,
+                  preferAlignment: Alignment.topRight,
+                  clickPosition: details.globalPosition,
+                  child: FloatingBar(
+                    direction: Axis.vertical,
+                    decoration: FloatingBarDecoration.flatLightMode,
+                    children: [
+                      for (int j = length; j < widget.options.length; j++)
+                        optionButton(j, fromPopup: true),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ]
+        ]
+      ],
+    );
+  }
+
+  Widget optionButton(int index, {bool fromPopup = false}) {
+    final option = widget.options[index];
+    return MyIconButton(
+      icon: option.$2,
+      size: 20,
+      tooltip: option.$3,
+      isSelected: option.$1 == widget.selectedValue,
+      decoration: MyIconButtonDecoration.onDarkBar8,
+      primaryAction: (_) {
+        widget.onChanged(option.$1);
+        if (fromPopup) ContextPopup.close();
+      },
+    );
+  }
+}
+
+extension EnumValues<T extends Enum> on Type {
+  List<T> get values => (T.values as List<T>);
 }

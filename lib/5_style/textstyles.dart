@@ -45,6 +45,13 @@ class MyTextStyles {
     color: MyColors.slate,
   );
 
+  static const TextStyle darkHeader3Hover = TextStyle(
+    fontFamily: _fontFamily,
+    fontSize: 14,
+    fontWeight: _bold,
+    color: MyColors.dark,
+  );
+
   static const TextStyle lightHeader3 = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 14,

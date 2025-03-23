@@ -1,12 +1,13 @@
 import 'dart:math';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/3_components/layout/dynamic_decoration.dart';
 import 'package:jouhakka_forge/3_components/layout/dynamic_padding.dart';
+import 'package:jouhakka_forge/4_views/page_design_view.dart';
 
 class ElementWidget extends StatefulWidget {
   final UIElement element;
@@ -83,6 +84,47 @@ class _ElementWidgetState extends State<ElementWidget> {
       }
     }
 
+    if (container != null) {
+      if (container.overflow == ContentOverflow.allow) {
+        current = OverflowBox(
+          fit: OverflowBoxFit.deferToChild,
+          alignment: container.type is SingleChildElementType
+              ? (container.type as SingleChildElementType).alignment
+              : Alignment.center,
+          child: current,
+        );
+      } else if (container.overflow == ContentOverflow.clip) {
+        current = ClipRect(child: current);
+      } else if (container.overflow == ContentOverflow.verticalScroll ||
+          container.overflow == ContentOverflow.horizontalScroll) {
+        try {
+          double initialOffset = PageDesignView.scrollStates[hashCode] ?? 0.0;
+          ScrollController controller =
+              ScrollController(initialScrollOffset: initialOffset);
+          controller.addListener(() {
+            PageDesignView.scrollStates[hashCode] = controller.offset;
+          });
+          current = GestureDetector(
+            onVerticalDragUpdate: (details) {
+              debugPrint("Drag update");
+            },
+            child: SingleChildScrollView(
+              controller: controller,
+              scrollDirection:
+                  container.overflow == ContentOverflow.verticalScroll
+                      ? Axis.vertical
+                      : Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(),
+              restorationId: hashCode.toString(),
+              child: current,
+            ),
+          );
+        } catch (e, s) {
+          debugPrint("Error in SingleChildScrollView: $e $s");
+        }
+      }
+    }
+
     BoxConstraints? constraints;
     bool constrainedWidth = element.size.width is AutomaticSize &&
         (element.size.width as AutomaticSize).constrained;
@@ -142,7 +184,7 @@ class _ElementWidgetState extends State<ElementWidget> {
           extraPadding: extraPadding,
           child: current,
         );
-      } else if (container.padding != EdgeInsets.zero) {
+      } else if (container.padding.padding != EdgeInsets.zero) {
         current = Padding(padding: container.padding.padding, child: current);
       }
     }
@@ -175,18 +217,6 @@ class _ElementWidgetState extends State<ElementWidget> {
         },
       );
     }
-
-    /*if (clipBehavior != Clip.none) {
-      assert(decoration != null);
-      current = ClipPath(
-        clipper: _DecorationClipper(
-          textDirection: Directionality.maybeOf(context),
-          decoration: decoration!,
-        ),
-        clipBehavior: clipBehavior,
-        child: current,
-      );
-    }*/
 
     if (constraints != null) {
       current = ConstrainedBox(constraints: constraints, child: current);

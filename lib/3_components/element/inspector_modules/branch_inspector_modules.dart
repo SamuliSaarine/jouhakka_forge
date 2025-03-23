@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
@@ -13,105 +15,114 @@ import 'package:jouhakka_forge/3_components/layout/gap.dart';
 import 'package:jouhakka_forge/3_components/layout/inspector_boxes.dart';
 import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
 import 'package:jouhakka_forge/3_components/text_field.dart';
+import 'package:jouhakka_forge/5_style/colors.dart';
+import 'package:jouhakka_forge/5_style/textstyles.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 extension ElementContainerEditor on ElementContainer {
   Widget getEditor() {
-    return HeadPropertyBox(
-      title: "Content",
-      tip: "Container content",
-      contextMenuItems: [
-        ContextMenuItem(
-          "Delete",
-          action: (_) {
-            element.content.value = null;
-          },
-        ),
-      ],
-      children: [
-        ChangeListener(
-          source: this,
-          builder: () {
-            return PropertyFieldBox(
-              title: "Padding",
-              tip: "Apply padding around content",
-              contextMenuItems: const [],
-              content: padding.getEditor(
-                element,
-                (padding) {
-                  this.padding = padding;
-                },
-                notifyListeners,
-              ),
-            );
-          },
-        ),
-        type.getEditor(
-          onScrollEnable: (axis) {
-            for (UIElement child in children) {
-              if (axis == Axis.horizontal &&
-                  child.size.width is ExpandingSize) {
-                child.size.width =
-                    ControlledSize.constant(child.size.width.renderValue!);
-              } else if (axis == Axis.vertical &&
-                  child.size.height is ExpandingSize) {
-                child.size.heightToConstant();
-              }
-            }
-          },
-          switchType: (type) {
-            if (type.runtimeType == this.type.runtimeType) return;
-            this.type = type;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-extension ContainerElementEditor on ElementContainerType {
-  Widget getEditor(
-      {required void Function(Axis axis) onScrollEnable,
-      required void Function(ElementContainerType type) switchType}) {
     return ChangeListener(
         source: this,
         builder: () {
-          return SubPropertyBox(
-            sideChild: this is SingleChildElementType
-                ? null
-                : Column(
-                    children: [
-                      MyIconButton(
-                        icon: LucideIcons.rows2,
-                        isSelected: this is FlexElementType,
-                        primaryAction: (details) {
-                          switchType(FlexElementType(Axis.vertical));
-                        },
-                      ),
-                    ],
-                  ),
-            title: label,
-            tip: "Container properties",
-            contextMenuItems: const [],
+          return HeadPropertyBox(
+            title: "Content",
+            tip: "Container content",
+            contextMenuItems: [
+              ContextMenuItem(
+                "Delete",
+                action: (_) {
+                  element.content.value = null;
+                },
+              ),
+            ],
             children: [
-              _scrollChoice(onScrollEnable),
-              _fromType(),
+              PropertyFieldBox(
+                title: "Padding",
+                tip: "Apply padding around content",
+                contextMenuItems: const [],
+                content: padding.getEditor(
+                  element,
+                  (padding) {
+                    this.padding = padding;
+                  },
+                  notifyListeners,
+                ),
+              ),
+              overflow.getEditor(
+                (newOverflow) {
+                  overflow = newOverflow;
+                  if (overflow == ContentOverflow.verticalScroll) {
+                    for (UIElement child in children) {
+                      if (child.size.height is ExpandingSize) {
+                        child.size.height = ControlledSize.constant(
+                          child.size.height.renderValue!,
+                        );
+                      }
+                    }
+                  } else if ((overflow == ContentOverflow.horizontalScroll)) {
+                    for (UIElement child in children) {
+                      if (child.size.width is ExpandingSize) {
+                        child.size.width = ControlledSize.constant(
+                          child.size.width.renderValue!,
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+              type.getEditor(
+                element,
+                switchType: (type) {
+                  if (type.runtimeType == this.type.runtimeType) return;
+                  this.type = type;
+                },
+              ),
             ],
           );
         });
   }
+}
 
-  Widget _fromType() {
-    if (this is SingleChildElementType) {
-      return _singleChildEditor(this as SingleChildElementType);
-    } else if (this is FlexElementType) {
-      return _flexEditor(this as FlexElementType);
-    } else {
-      return const Text("Unsupported container type");
+extension ContainerElementEditor on ElementContainerType {
+  Widget getEditor(UIElement element,
+      {required void Function(ElementContainerType type) switchType}) {
+    List<Widget> fromType() {
+      if (this is SingleChildElementType) {
+        return [_singleChildEditor(this as SingleChildElementType)];
+      } else if (this is FlexElementType) {
+        return _flexEditor(this as FlexElementType, element,
+            notifyListeners: notifyListeners);
+      } else {
+        return [const Text("Unsupported container type")];
+      }
     }
+
+    return SubPropertyBox(
+      sideChild: this is SingleChildElementType ||
+              this
+                  is FlexElementType //TODO: Remove check for flexelementtype when there are more types
+          ? null
+          : Column(
+              children: [
+                MyIconButton(
+                  icon: LucideIcons.rows2,
+                  isSelected: this is FlexElementType,
+                  primaryAction: (details) {
+                    switchType(FlexElementType(Axis.vertical));
+                  },
+                ),
+              ],
+            ),
+      title: label,
+      tip: "Container properties",
+      contextMenuItems: const [],
+      children:
+          //_scrollChoice(onScrollEnable),
+          fromType(),
+    );
   }
 
-  Widget _scrollChoice(void Function(Axis axis) onScrollEnable) {
+  /*Widget _scrollChoice(void Function(Axis axis) onScrollEnable) {
     return FloatingBar(children: [
       MyIconButton(
         icon: LucideIcons.lock,
@@ -146,170 +157,195 @@ extension ContainerElementEditor on ElementContainerType {
         },
       ),
     ]);
-  }
+  }*/
 
-  Widget _singleChildEditor(SingleChildElementType type) =>
-      type.alignment.getEditor(
-        (alignment) {
-          type.alignment = alignment;
-        },
+  Widget _singleChildEditor(SingleChildElementType type) => PropertyFieldBox(
+        title: "Alignment",
+        tip: "Element alignment",
+        contextMenuItems: const [],
+        content: type.alignment.getEditor(
+          (alignment) {
+            type.alignment = alignment;
+          },
+        ),
       );
 
-  Widget _flexEditor(FlexElementType type) {
+  List<Widget> _flexEditor(FlexElementType type, UIElement element,
+      {required void Function() notifyListeners}) {
     bool isVertical = type.direction == Axis.vertical;
-    return Column(
-      children: [
-        FloatingBar(
-          children: [
-            MyIconButton(
-              icon: LucideIcons.arrowDown,
-              size: 14,
-              decoration: MyIconButtonDecoration.onDarkBar8,
-              isSelected: type.direction == Axis.vertical,
-              primaryAction: (_) {
-                type.direction = Axis.vertical;
-              },
+    Widget directionButton(bool vertical) {
+      return ClickDetector(
+        primaryActionDown: (_) {
+          type.direction = vertical ? Axis.vertical : Axis.horizontal;
+        },
+        builder: (hovering, _) {
+          bool selected = vertical == isVertical;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                vertical ? "Vertical" : "Horizontal",
+                style: selected
+                    ? MyTextStyles.darkHeader3
+                        .copyWith(color: MyColors.darkMint)
+                    : hovering
+                        ? MyTextStyles.darkHeader3
+                            .copyWith(color: MyColors.dark)
+                        : MyTextStyles.darkHeader3,
+              ),
+              Icon(
+                vertical ? LucideIcons.arrowDown : LucideIcons.arrowRight,
+                color: selected
+                    ? MyColors.darkMint
+                    : hovering
+                        ? MyColors.dark
+                        : MyColors.slate,
+                size: 14,
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    Widget mainAxisAlignment() {
+      return PropertyFieldBox(
+        title: "Main axis:",
+        tip: "Main axis alignment",
+        contextMenuItems: const [],
+        content: EnumEditor<MainAxisAlignment>(
+          selectedValue: type.mainAxisAlignment,
+          onChanged: (value) => type.mainAxisAlignment = value,
+          options: [
+            (
+              MainAxisAlignment.start,
+              isVertical
+                  ? LucideIcons.alignVerticalJustifyStart
+                  : LucideIcons.alignHorizontalJustifyStart,
+              "Start"
             ),
-            MyIconButton(
-              icon: LucideIcons.arrowRight,
-              size: 14,
-              decoration: MyIconButtonDecoration.onDarkBar8,
-              isSelected: type.direction == Axis.horizontal,
-              primaryAction: (_) {
-                type.direction = Axis.horizontal;
-              },
+            (
+              MainAxisAlignment.end,
+              isVertical
+                  ? LucideIcons.alignVerticalJustifyEnd
+                  : LucideIcons.alignHorizontalJustifyEnd,
+              "End"
             ),
+            (
+              MainAxisAlignment.center,
+              isVertical
+                  ? LucideIcons.alignVerticalJustifyCenter
+                  : LucideIcons.alignHorizontalJustifyCenter,
+              "Center",
+            ),
+            (
+              MainAxisAlignment.spaceBetween,
+              isVertical
+                  ? LucideIcons.alignVerticalSpaceBetween
+                  : LucideIcons.alignHorizontalSpaceBetween,
+              "Space between",
+            ),
+            (
+              MainAxisAlignment.spaceAround,
+              isVertical
+                  ? LucideIcons.alignVerticalSpaceAround
+                  : LucideIcons.alignHorizontalSpaceAround,
+              "Space around",
+            ),
+            (
+              MainAxisAlignment.spaceEvenly,
+              isVertical ? LucideIcons.rows3 : LucideIcons.columns3,
+              "Space evenly",
+            )
           ],
         ),
-        Column(
-          children: [
-            //Main axis alignment
-            FloatingBar(
-              children: [
-                MyIconButton(
-                  icon: isVertical
-                      ? LucideIcons.alignStartVertical
-                      : LucideIcons.alignStartHorizontal,
-                  size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar8,
-                  isSelected: type.mainAxisAlignment == MainAxisAlignment.start,
-                  primaryAction: (_) {
-                    type.mainAxisAlignment = MainAxisAlignment.start;
-                  },
-                ),
-                MyIconButton(
-                  icon: isVertical
-                      ? LucideIcons.alignEndVertical
-                      : LucideIcons.alignEndHorizontal,
-                  size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar8,
-                  isSelected: type.mainAxisAlignment == MainAxisAlignment.end,
-                  primaryAction: (_) {
-                    type.mainAxisAlignment = MainAxisAlignment.end;
-                  },
-                ),
-                MyIconButton(
-                  icon: isVertical
-                      ? LucideIcons.alignCenterVertical
-                      : LucideIcons.alignCenterHorizontal,
-                  size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar8,
-                  isSelected:
-                      type.mainAxisAlignment == MainAxisAlignment.center,
-                  primaryAction: (_) {
-                    type.mainAxisAlignment = MainAxisAlignment.center;
-                  },
-                ),
-                MyIconButton(
-                  icon: isVertical
-                      ? LucideIcons.alignVerticalSpaceAround
-                      : LucideIcons.alignHorizontalSpaceAround,
-                  size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar8,
-                  isSelected:
-                      type.mainAxisAlignment == MainAxisAlignment.spaceAround,
-                  primaryAction: (_) {
-                    type.mainAxisAlignment = MainAxisAlignment.spaceAround;
-                  },
-                ),
-                MyIconButton(
-                  icon: isVertical
-                      ? LucideIcons.alignVerticalSpaceBetween
-                      : LucideIcons.alignHorizontalSpaceBetween,
-                  size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar8,
-                  isSelected:
-                      type.mainAxisAlignment == MainAxisAlignment.spaceBetween,
-                  primaryAction: (_) {
-                    type.mainAxisAlignment = MainAxisAlignment.spaceBetween;
-                  },
-                ),
-              ],
+      );
+    }
+
+    Widget crossAxisAlignment() {
+      return PropertyFieldBox(
+        title: "Cross axis:",
+        tip: "Cross axis alignment",
+        contextMenuItems: const [],
+        content: EnumEditor<CrossAxisAlignment>(
+          selectedValue: type.crossAxisAlignment,
+          onChanged: (value) => type.crossAxisAlignment = value,
+          options: [
+            (
+              CrossAxisAlignment.start,
+              isVertical
+                  ? LucideIcons.alignStartHorizontal
+                  : LucideIcons.alignStartVertical,
+              "Start"
             ),
-            //Cross axis alignment
-            FloatingBar(children: [
-              MyIconButton(
-                icon: isVertical
-                    ? LucideIcons.alignStartHorizontal
-                    : LucideIcons.alignStartVertical,
-                size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar8,
-                isSelected: type.crossAxisAlignment == CrossAxisAlignment.start,
-                primaryAction: (_) {
-                  type.crossAxisAlignment = CrossAxisAlignment.start;
-                },
+            (
+              CrossAxisAlignment.end,
+              isVertical
+                  ? LucideIcons.alignEndHorizontal
+                  : LucideIcons.alignEndVertical,
+              "End"
+            ),
+            (
+              CrossAxisAlignment.center,
+              isVertical
+                  ? LucideIcons.alignCenterHorizontal
+                  : LucideIcons.alignCenterVertical,
+              "Center",
+            ),
+            (
+              CrossAxisAlignment.stretch,
+              isVertical
+                  ? LucideIcons.stretchHorizontal
+                  : LucideIcons.stretchVertical,
+              "Stretch",
+            ),
+            if (!isVertical)
+              (
+                CrossAxisAlignment.baseline,
+                LucideIcons.baseline,
+                "Baseline",
               ),
-              MyIconButton(
-                icon: isVertical
-                    ? LucideIcons.alignEndHorizontal
-                    : LucideIcons.alignEndVertical,
-                size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar8,
-                isSelected: type.crossAxisAlignment == CrossAxisAlignment.end,
-                primaryAction: (_) {
-                  type.crossAxisAlignment = CrossAxisAlignment.end;
-                },
-              ),
-              MyIconButton(
-                icon: isVertical
-                    ? LucideIcons.alignCenterHorizontal
-                    : LucideIcons.alignCenterVertical,
-                size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar8,
-                isSelected:
-                    type.crossAxisAlignment == CrossAxisAlignment.center,
-                primaryAction: (_) {
-                  type.crossAxisAlignment = CrossAxisAlignment.center;
-                },
-              ),
-              MyIconButton(
-                icon: isVertical
-                    ? LucideIcons.stretchHorizontal
-                    : LucideIcons.stretchVertical,
-                size: 14,
-                decoration: MyIconButtonDecoration.onDarkBar8,
-                isSelected:
-                    type.crossAxisAlignment == CrossAxisAlignment.stretch,
-                primaryAction: (_) {
-                  type.crossAxisAlignment = CrossAxisAlignment.stretch;
-                },
-              ),
-              if (!isVertical)
-                MyIconButton(
-                  icon: LucideIcons.baseline,
-                  size: 14,
-                  decoration: MyIconButtonDecoration.onDarkBar8,
-                  isSelected:
-                      type.crossAxisAlignment == CrossAxisAlignment.baseline,
-                  primaryAction: (_) {
-                    type.crossAxisAlignment = CrossAxisAlignment.baseline;
-                  },
-                ),
-            ]),
           ],
         ),
-      ],
-    );
+      );
+    }
+
+    TextEditingController spacingController =
+        TextEditingController(text: type.spacing.toString());
+
+    Widget spacingField() {
+      return PropertyFieldBox(
+        title: "Spacing",
+        tip: "Generates space between each child",
+        contextMenuItems: [],
+        content: MyTextField(
+          controller: spacingController,
+          onSubmitted: (value) {
+            try {
+              type.spacing = VariableParser.parse<double>(value, element,
+                  notifyListeners: notifyListeners);
+              return true;
+            } catch (e) {
+              debugPrint("Changing spacing failed: $value. Error: $e");
+              return false;
+            }
+          },
+        ),
+      );
+    }
+
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          directionButton(true),
+          directionButton(false),
+        ],
+      ),
+      mainAxisAlignment(),
+      crossAxisAlignment(),
+      spacingField(),
+    ];
   }
 }
 
@@ -371,6 +407,34 @@ extension ElementDecorationEditor on ElementDecoration {
           ],
         );
       },
+    );
+  }
+}
+
+extension OverflowEditor on ContentOverflow {
+  Widget getEditor(void Function(ContentOverflow) onChanged) {
+    return PropertyFieldBox(
+      title: "Overflow:",
+      tip: "Content overflow",
+      contextMenuItems: const [],
+      content: EnumEditor<ContentOverflow>(
+        selectedValue: this,
+        onChanged: onChanged,
+        options: [
+          (ContentOverflow.allow, LucideIcons.check, "Allowed"),
+          (ContentOverflow.clip, LucideIcons.scissors, "Clip"),
+          (
+            ContentOverflow.verticalScroll,
+            LucideIcons.arrowDown,
+            "Vertical Scroll"
+          ),
+          (
+            ContentOverflow.horizontalScroll,
+            LucideIcons.arrowRight,
+            "Horizontal Scroll"
+          ),
+        ],
+      ),
     );
   }
 }

@@ -87,6 +87,7 @@ class MyIconButton extends StatelessWidget {
 
     return MyTooltip(
       tooltip,
+      millisecondsToWait: 800,
       child: current,
     );
 

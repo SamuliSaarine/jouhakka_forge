@@ -11,6 +11,7 @@ extension TextElementNotifyExtension on TextElement {
   set text(String value) {
     if (_text == value) return;
     _text = value;
+
     notifyListeners();
   }
 
@@ -18,6 +19,7 @@ extension TextElementNotifyExtension on TextElement {
   set color(Color value) {
     if (_color == value) return;
     _color = value;
+
     notifyListeners();
   }
 
@@ -25,6 +27,7 @@ extension TextElementNotifyExtension on TextElement {
   set fontSize(double value) {
     if (_fontSize == value) return;
     _fontSize = value;
+
     notifyListeners();
   }
 
@@ -32,6 +35,7 @@ extension TextElementNotifyExtension on TextElement {
   set fontWeight(FontWeight value) {
     if (_fontWeight == value) return;
     _fontWeight = value;
+
     notifyListeners();
   }
 
@@ -39,6 +43,7 @@ extension TextElementNotifyExtension on TextElement {
   set alignment(Alignment value) {
     if (_alignment == value) return;
     _alignment = value;
+
     notifyListeners();
   }
 }
@@ -48,6 +53,7 @@ extension ImageElementNotifyExtension on ImageElement {
   set imagePath(String value) {
     if (_imagePath == value) return;
     _imagePath = value;
+
     notifyListeners();
   }
 
@@ -55,6 +61,7 @@ extension ImageElementNotifyExtension on ImageElement {
   set source(ImageSource value) {
     if (_source == value) return;
     _source = value;
+
     notifyListeners();
   }
 
@@ -62,6 +69,7 @@ extension ImageElementNotifyExtension on ImageElement {
   set fit(BoxFit value) {
     if (_fit == value) return;
     _fit = value;
+
     notifyListeners();
   }
 
@@ -69,6 +77,7 @@ extension ImageElementNotifyExtension on ImageElement {
   set alignment(Alignment value) {
     if (_alignment == value) return;
     _alignment = value;
+
     notifyListeners();
   }
 }
@@ -78,6 +87,7 @@ extension IconElementNotifyExtension on IconElement {
   set icon(IconData value) {
     if (_icon == value) return;
     _icon = value;
+
     notifyListeners();
   }
 
@@ -85,6 +95,7 @@ extension IconElementNotifyExtension on IconElement {
   set color(Color value) {
     if (_color == value) return;
     _color = value;
+
     notifyListeners();
   }
 }

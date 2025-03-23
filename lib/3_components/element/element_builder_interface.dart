@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/1_helpers/element_helper.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
@@ -53,6 +54,8 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
   bool _isHovering = false;
   late Type _lastWidthType;
   late Type _lastHeightType;
+  late int? _lastVerticalFlex;
+  late int? _lastHorizontalFlex;
 
   @override
   void initState() {
@@ -94,6 +97,12 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
     _lastWidthType = element.size.width.runtimeType;
     _lastHeightType = element.size.height.runtimeType;
+    if (element.size.width is ExpandingSize) {
+      _lastHorizontalFlex = (element.size.width as ExpandingSize).flex.value;
+    }
+    if (element.size.height is ExpandingSize) {
+      _lastVerticalFlex = (element.size.height as ExpandingSize).flex.value;
+    }
     element.addListener(updateOnChange);
   }
 
@@ -139,9 +148,23 @@ class _ElementBuilderInterfaceState extends State<ElementBuilderInterface> {
 
   void updateOnChange() {
     if (element.size.width.runtimeType != _lastWidthType ||
-        element.size.height.runtimeType != _lastHeightType) {
+        element.size.height.runtimeType != _lastHeightType ||
+        (element.size.width is ExpandingSize &&
+            _lastHorizontalFlex !=
+                (element.size.width as ExpandingSize).flex.value) ||
+        (element.size.height is ExpandingSize &&
+            _lastVerticalFlex !=
+                (element.size.height as ExpandingSize).flex.value)) {
       _lastWidthType = element.size.width.runtimeType;
       _lastHeightType = element.size.height.runtimeType;
+
+      _lastHorizontalFlex = element.size.width is ExpandingSize
+          ? (element.size.width as ExpandingSize).flex.value
+          : null;
+
+      _lastVerticalFlex = element.size.height is ExpandingSize
+          ? (element.size.height as ExpandingSize).flex.value
+          : null;
       widget.onBodyChanged(element, widget.index);
     } else {
       setState(() {});

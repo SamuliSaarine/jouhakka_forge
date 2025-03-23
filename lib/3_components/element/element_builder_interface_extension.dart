@@ -289,6 +289,8 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
         if (expandChild) {
           //TODO: Implement flex
           return Expanded(
+            flex:
+                (child.size.getAxis(flexDirection) as ExpandingSize).flex.value,
             child: interface,
           );
         } else {

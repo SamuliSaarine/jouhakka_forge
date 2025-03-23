@@ -72,6 +72,8 @@ class ConstantVariable<T> extends Variable<T> {
   toString() {
     if (value is Color) {
       return (value as Color).toHex().toUpperCase();
+    } else if (value is double && value as double == double.infinity) {
+      return "inf";
     }
     return value.toString();
   }
@@ -333,6 +335,11 @@ class VariableParser {
       String input, UIElement element, void Function() notifyListeners,
       {bool normalizeDouble = false}) {
     try {
+      String lowerCaseInput = input.toLowerCase();
+      if (lowerCaseInput == "inf" || lowerCaseInput == "infinity") {
+        return ConstantVariable<T>(double.infinity as T);
+      }
+
       double num = double.parse(input);
 
       if (T == int) {

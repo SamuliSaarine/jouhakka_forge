@@ -11,7 +11,7 @@ extension ElementRootNotifyExtension on ElementRoot {
   set body(UIElement value) {
     if (_body == value) return;
     _body = value;
-    debugPrint("Body changed");
+
     notifyListeners();
   }
 }

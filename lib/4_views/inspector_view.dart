@@ -123,36 +123,19 @@ class InspectorView extends StatelessWidget {
                 element,
                 onDelete: () => element.decoration.value = null,
               ),
+            AddPropertiesEditor(properties: [
+              if (element.decoration.value == null)
+                (
+                  "Decoration",
+                  Icons.format_paint,
+                  () {
+                    element.decoration.value = ElementDecoration();
+                  }
+                ),
+            ])
           ],
         );
       },
     );
   }
-
-  /*Widget _sizeEditors(UIElement element) {
-    if (element.parent != null) {
-      return Padding(
-        padding: const EdgeInsets.all(6.0),
-        child: Column(children: [
-          PropertyFieldBox(
-              title: "Width",
-              tip: "Width of element",
-              content: element.size.width.getEditor("Width"),
-              contextMenuItems: const []),
-          Gap.h2,
-          MyDividers.lightHorizontal,
-          Gap.h2,
-          PropertyFieldBox(
-              title: "Height",
-              tip: "Height of element",
-              content: element.size.height.getEditor("Height"),
-              contextMenuItems: const []),
-        ]),
-      );
-    } else {
-      return const Center(
-        child: Text("Cannot edit size of root element"),
-      );
-    }
-  }*/
 }

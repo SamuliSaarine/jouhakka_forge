@@ -13,7 +13,7 @@ extension BranchElementHelper on BranchElement {
     if (container == null) {
       content.value = ElementContainer.singleChildFromType(
         element: this,
-        childType: type ?? UIElementType.box,
+        childType: type ?? UIElementType.empty,
       );
     } else {
       if (container.type is SingleChildElementType) {

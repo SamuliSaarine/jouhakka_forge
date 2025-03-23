@@ -6,11 +6,20 @@ part of 'container_element.dart';
 // NotifierGenerator
 // **************************************************************************
 
-extension ContainerElementTypeNotifyExtension on ElementContainerType {
-  Axis? get scroll => _scroll;
-  set scroll(Axis? value) {
-    if (_scroll == value) return;
-    _scroll = value;
+extension ElementContainerNotifyExtension on ElementContainer {
+  MyPadding get padding => _padding;
+  set padding(MyPadding value) {
+    if (_padding == value) return;
+    _padding = value;
+
+    notifyListeners();
+  }
+
+  ContentOverflow get overflow => _overflow;
+  set overflow(ContentOverflow value) {
+    if (_overflow == value) return;
+    _overflow = value;
+
     notifyListeners();
   }
 }
@@ -20,6 +29,7 @@ extension SingleChildElementTypeNotifyExtension on SingleChildElementType {
   set alignment(Alignment value) {
     if (_alignment == value) return;
     _alignment = value;
+
     notifyListeners();
   }
 }
@@ -29,6 +39,7 @@ extension FlexElementTypeNotifyExtension on FlexElementType {
   set direction(Axis value) {
     if (_direction == value) return;
     _direction = value;
+
     notifyListeners();
   }
 
@@ -36,6 +47,7 @@ extension FlexElementTypeNotifyExtension on FlexElementType {
   set mainAxisAlignment(MainAxisAlignment value) {
     if (_mainAxisAlignment == value) return;
     _mainAxisAlignment = value;
+
     notifyListeners();
   }
 
@@ -43,13 +55,15 @@ extension FlexElementTypeNotifyExtension on FlexElementType {
   set crossAxisAlignment(CrossAxisAlignment value) {
     if (_crossAxisAlignment == value) return;
     _crossAxisAlignment = value;
+
     notifyListeners();
   }
 
-  double get spacing => _spacing;
-  set spacing(double value) {
+  Variable<double> get spacing => _spacing;
+  set spacing(Variable<double> value) {
     if (_spacing == value) return;
     _spacing = value;
+
     notifyListeners();
   }
 }
@@ -59,6 +73,7 @@ extension StackElementTypeNotifyExtension on StackElementType {
   set alignment(AlignmentGeometry value) {
     if (_alignment == value) return;
     _alignment = value;
+
     notifyListeners();
   }
 
@@ -66,6 +81,7 @@ extension StackElementTypeNotifyExtension on StackElementType {
   set fit(StackFit value) {
     if (_fit == value) return;
     _fit = value;
+
     notifyListeners();
   }
 }
@@ -75,6 +91,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set direction(Axis value) {
     if (_direction == value) return;
     _direction = value;
+
     notifyListeners();
   }
 
@@ -82,6 +99,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set alignment(WrapAlignment value) {
     if (_alignment == value) return;
     _alignment = value;
+
     notifyListeners();
   }
 
@@ -89,6 +107,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set spacing(double value) {
     if (_spacing == value) return;
     _spacing = value;
+
     notifyListeners();
   }
 
@@ -96,6 +115,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set crossAxisAlignment(WrapCrossAlignment value) {
     if (_crossAxisAlignment == value) return;
     _crossAxisAlignment = value;
+
     notifyListeners();
   }
 
@@ -103,6 +123,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set textDirection(TextDirection value) {
     if (_textDirection == value) return;
     _textDirection = value;
+
     notifyListeners();
   }
 
@@ -110,6 +131,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set verticalDirection(VerticalDirection value) {
     if (_verticalDirection == value) return;
     _verticalDirection = value;
+
     notifyListeners();
   }
 
@@ -117,6 +139,7 @@ extension WrapElementTypeNotifyExtension on WrapElementType {
   set clipBehavior(Clip value) {
     if (_clipBehavior == value) return;
     _clipBehavior = value;
+
     notifyListeners();
   }
 }
@@ -127,6 +150,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set crossAxisCount(int value) {
     if (_crossAxisCount == value) return;
     _crossAxisCount = value;
+
     notifyListeners();
   }
 
@@ -134,6 +158,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set crossAxisSpacing(double value) {
     if (_crossAxisSpacing == value) return;
     _crossAxisSpacing = value;
+
     notifyListeners();
   }
 
@@ -141,6 +166,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set mainAxisSpacing(double value) {
     if (_mainAxisSpacing == value) return;
     _mainAxisSpacing = value;
+
     notifyListeners();
   }
 
@@ -148,6 +174,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set childAspectRatio(double value) {
     if (_childAspectRatio == value) return;
     _childAspectRatio = value;
+
     notifyListeners();
   }
 
@@ -155,6 +182,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set mainAxisAlignment(MainAxisAlignment value) {
     if (_mainAxisAlignment == value) return;
     _mainAxisAlignment = value;
+
     notifyListeners();
   }
 
@@ -162,6 +190,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set crossAxisAlignment(CrossAxisAlignment value) {
     if (_crossAxisAlignment == value) return;
     _crossAxisAlignment = value;
+
     notifyListeners();
   }
 
@@ -169,6 +198,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set direction(Axis value) {
     if (_direction == value) return;
     _direction = value;
+
     notifyListeners();
   }
 
@@ -176,6 +206,7 @@ extension ScrollableGridElementTypeNotifyExtension
   set canScroll(bool value) {
     if (_canScroll == value) return;
     _canScroll = value;
+
     notifyListeners();
   }
 }
@@ -185,6 +216,7 @@ extension ScalingGridElementTypeNotifyExtension on ScalingGridElementType {
   set alignment(WrapAlignment value) {
     if (_alignment == value) return;
     _alignment = value;
+
     notifyListeners();
   }
 
@@ -192,6 +224,7 @@ extension ScalingGridElementTypeNotifyExtension on ScalingGridElementType {
   set spacing(double value) {
     if (_spacing == value) return;
     _spacing = value;
+
     notifyListeners();
   }
 
@@ -199,6 +232,7 @@ extension ScalingGridElementTypeNotifyExtension on ScalingGridElementType {
   set crossAxisAlignment(WrapCrossAlignment value) {
     if (_crossAxisAlignment == value) return;
     _crossAxisAlignment = value;
+
     notifyListeners();
   }
 }

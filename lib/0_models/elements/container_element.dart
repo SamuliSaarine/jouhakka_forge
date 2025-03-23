@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
@@ -10,6 +11,7 @@ import '../../3_components/element/ui_element_component.dart';
 
 part 'container_element.g.dart';
 
+@notifier
 class ElementContainer extends ChangeNotifier {
   final BranchElement element;
 
@@ -26,19 +28,11 @@ class ElementContainer extends ChangeNotifier {
     _type.notifyListeners();
   }
 
+  @notify
   MyPadding _padding = MyPadding.zero;
-  MyPadding get padding => _padding;
-  set padding(MyPadding value) {
-    _padding = value;
-    notifyListeners();
-  }
 
+  @notify
   ContentOverflow _overflow = ContentOverflow.clip;
-  ContentOverflow get overflow => _overflow;
-  set overflow(ContentOverflow value) {
-    _overflow = value;
-    notifyListeners();
-  }
 
   /// [UIElement] that can contain one or more [UIElement]s.
   ElementContainer({
@@ -119,8 +113,8 @@ class ElementContainer extends ChangeNotifier {
   }
 
   void changeContainerType(ElementContainerType newType) {
-    Axis? oldScroll = type.scroll;
-    type = newType..scroll = oldScroll;
+    //Axis? oldScroll = type.scroll;
+    type = newType; //..scroll = oldScroll;
   }
 
   //TODO: Used only in play mode, test this when play mode is implemented
@@ -180,19 +174,14 @@ class ElementContainer extends ChangeNotifier {
 
 enum ContentOverflow { allow, clip, horizontalScroll, verticalScroll }
 
-@notifier
 abstract class ElementContainerType extends ChangeNotifier {
   /// Returns a [Widget] that contains the children.
   Widget getWidget(List<Widget> children);
   String get label;
-  @notify
-  Axis? _scroll;
 
   ElementContainerType clone();
 
-  void copy(ElementContainerType other) {
-    scroll = other.scroll;
-  }
+  void copy(ElementContainerType other) {}
 
   @override
   void notifyListeners() {
@@ -217,7 +206,7 @@ class SingleChildElementType extends ElementContainerType {
     Widget current = children.first;
 
     // Wrap in SingleChildScrollView if scroll is enabled and ctrl is pressed
-    if (scroll != null) {
+    /*if (scroll != null) {
       try {
         double initialOffset = PageDesignView.scrollStates[hashCode] ?? 0.0;
         ScrollController controller =
@@ -240,7 +229,7 @@ class SingleChildElementType extends ElementContainerType {
       } catch (e, s) {
         debugPrint("Error in SingleChildScrollView: $e $s");
       }
-    }
+    }*/
 
     return Align(alignment: alignment, child: current);
   }
@@ -272,7 +261,7 @@ class FlexElementType extends ElementContainerType {
   CrossAxisAlignment _crossAxisAlignment = CrossAxisAlignment.start;
 
   @notify
-  double _spacing = 0;
+  Variable<double> _spacing = ConstantVariable<double>(0);
 
   /// [ElementContainerType] that arranges children in a row or column.
   FlexElementType(
@@ -283,13 +272,13 @@ class FlexElementType extends ElementContainerType {
   Widget getWidget(List<Widget> children,
       {MainAxisSize mainAxisSize = MainAxisSize.max}) {
     List<Widget> spacedChildren = [];
-    if (spacing > 0 && children.length > 1) {
+    if (spacing.value > 0 && children.length > 1) {
       // Add sized box between each child
       for (int i = 0; i < children.length; i++) {
         if (i != 0) {
           spacedChildren.add(SizedBox(
-            width: direction == Axis.horizontal ? spacing : null,
-            height: direction == Axis.vertical ? spacing : null,
+            width: direction == Axis.horizontal ? spacing.value : null,
+            height: direction == Axis.vertical ? spacing.value : null,
           ));
         }
         spacedChildren.add(children[i]);
@@ -304,7 +293,7 @@ class FlexElementType extends ElementContainerType {
       children: spacedChildren.isEmpty ? children : spacedChildren,
     );
 
-    if (scroll != null) {
+    /*if (scroll != null) {
       try {
         double initialOffset = PageDesignView.scrollStates[hashCode] ?? 0.0;
         ScrollController controller =
@@ -322,7 +311,7 @@ class FlexElementType extends ElementContainerType {
       } catch (e, s) {
         debugPrint("Error in SingleChildScrollView: $e $s");
       }
-    }
+    }*/
     return current;
   }
 

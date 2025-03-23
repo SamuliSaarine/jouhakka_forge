@@ -12,7 +12,7 @@ dependencies:
   build_runner: ^2.4.15
   flutter:
     sdk: flutter
-  lucide_icons_flutter: ^1.2.6
+  lucide_icons_flutter: ^2.0.1
   popover: ^0.3.1
   source_gen: ^2.0.0
   vector_math: ^2.1.4
@@ -21,7 +21,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^5.0.0
   test: ^1.25.15
 
 
