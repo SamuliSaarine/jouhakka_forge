@@ -9,12 +9,14 @@ class Project {
   final String id;
   String name;
   final ElementRootFolder<UIPage> pages =
-      ElementRootFolder("Pages", parent: null, items: [UIPage.empty()]);
+      ElementRootFolder("Pages", parent: null);
   final ElementRootFolder<UIComponent> components =
       ElementRootFolder("Components", parent: null);
   final VariableMap variables = VariableMap();
 
-  Project(this.name) : id = IDService.newID("pr");
+  Project(this.name) : id = IDService.newID("pr") {
+    pages.newItem();
+  }
 
   factory Project.empty() {
     return Project("New Project");

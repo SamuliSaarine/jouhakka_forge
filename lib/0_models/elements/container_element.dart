@@ -6,7 +6,6 @@ import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
-import 'package:jouhakka_forge/4_views/page_design_view.dart';
 import '../../3_components/element/ui_element_component.dart';
 
 part 'container_element.g.dart';
@@ -91,6 +90,20 @@ class ElementContainer extends ChangeNotifier {
       element.content.value = null;
       return;
     }
+    childNotifier.notifyListeners();
+  }
+
+  void insertChild(int index, UIElement child) {
+    if (type is SingleChildElementType && children.isNotEmpty) {
+      throw Exception(
+          "SingleChildElementType can only have one child. Change the container type first.");
+    }
+
+    if (child.parent != this) {
+      child = child.clone();
+    }
+
+    children.insert(index, child);
     childNotifier.notifyListeners();
   }
 
@@ -249,6 +262,7 @@ class SingleChildElementType extends ElementContainerType {
   String get label => "Container";
 }
 
+//TODO: Test and fix stretch more
 @notifier
 class FlexElementType extends ElementContainerType {
   @notify

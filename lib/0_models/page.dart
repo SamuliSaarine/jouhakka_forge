@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jouhakka_forge/0_models/component.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';
@@ -18,6 +19,7 @@ class UIPage extends ElementRoot {
   UIPage(
       {required super.title,
       this.backgroundColor = Colors.white,
+      required super.folder,
       UIElement? body})
       : super(
           id: IDService.newID('pg'),
@@ -34,8 +36,9 @@ class UIPage extends ElementRoot {
           ControlledSize.constant(Session.currentResolution.value.height);
   }
 
-  factory UIPage.empty() {
-    return UIPage(title: "New Page");
+  @override
+  factory UIPage.empty({required ElementRootFolder folder}) {
+    return UIPage(title: "New Page", folder: folder);
   }
 
   Widget asWidget() {
@@ -58,6 +61,7 @@ class UIPage extends ElementRoot {
 abstract class ElementRoot extends ChangeNotifier {
   final String id;
   String title;
+  ElementRootFolder folder;
   @notify
   late UIElement _body;
 
@@ -69,10 +73,24 @@ abstract class ElementRoot extends ChangeNotifier {
     _body.notifyListeners();
   }
 
-  ElementRoot({required this.id, required this.title, UIElement? body}) {
+  ElementRoot(
+      {required this.id,
+      required this.title,
+      required this.folder,
+      UIElement? body}) {
     if (body != null) {
       _body = body;
     }
+  }
+
+  static T empty<T extends ElementRoot>(
+      {required ElementRootFolder<T> folder}) {
+    if (T == UIPage) {
+      return UIPage.empty(folder: folder) as T;
+    } else if (T == UIComponent) {
+      return UIComponent.empty(folder: folder) as T;
+    }
+    throw Exception("Unknown ElementRoot type");
   }
 
   String type({bool plural = false, bool capital = true});
@@ -80,8 +98,8 @@ abstract class ElementRoot extends ChangeNotifier {
 
 class ElementRootFolder<T extends ElementRoot> {
   String name;
-  final List<ElementRootFolder<T>> folders;
-  final List<T> items;
+  final List<ElementRootFolder<T>> folders = [];
+  final List<T> items = [];
   ElementRootFolder<T>? parent;
   bool isExpanded;
 
@@ -98,9 +116,25 @@ class ElementRootFolder<T extends ElementRoot> {
     folders.add(ElementRootFolder<T>(name, parent: this));
   }
 
-  void addNewItem(T item) {
+  void moveItemTo(T item) {
     debugPrint("Adding new item $item | ${T.toString()}");
+    if (item.folder != this) {
+      item.folder.items.remove(item);
+      item.folder = this;
+    }
     items.add(item);
+  }
+
+  void newItem() {
+    items.add(ElementRoot.empty(folder: this));
+  }
+
+  bool removeItem(T item) {
+    return items.remove(item);
+  }
+
+  bool removeThis() {
+    return parent?.folders.remove(this) ?? false;
   }
 
   T? get first {
@@ -115,11 +149,7 @@ class ElementRootFolder<T extends ElementRoot> {
   ElementRootFolder(
     this.name, {
     this.parent,
-    List<ElementRootFolder<T>>? folders,
-    List<T>? items,
-  })  : isExpanded = true,
-        folders = folders ?? [],
-        items = items ?? [];
+  }) : isExpanded = true;
 }
 
 enum DesignMode { wireframe, design, prototype }

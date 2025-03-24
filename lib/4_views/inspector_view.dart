@@ -22,7 +22,6 @@ class InspectorView extends StatelessWidget {
   //TODO: Make padding editable
   @override
   Widget build(BuildContext context) {
-    bool isPage = root is Page;
     return Container(
       width: 280,
       color: MyColors.light,
@@ -31,7 +30,7 @@ class InspectorView extends StatelessWidget {
           source: Session.selectedElement,
           builder: (element) {
             if (element == null) {
-              return _rootInspector(isPage);
+              return _rootInspector(context);
             } else {
               return _elementInspector(element, context);
             }
@@ -41,7 +40,13 @@ class InspectorView extends StatelessWidget {
     );
   }
 
-  Widget _elementInspector(UIElement element, BuildContext context) {
+  Widget _inspectorBuilder(
+    BuildContext context,
+    String title, {
+    String tip = "",
+    List<ContextMenuItem> contextMenuChoices = const [],
+    required List<Widget> children,
+  }) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -51,39 +56,67 @@ class InspectorView extends StatelessWidget {
           padding: const EdgeInsets.only(
               left: 6.0, right: 6.0, top: 4.0, bottom: 2.0),
           child: InspectorTitle(
-            element.label,
+            title,
             canShrink: false,
             big: true,
-            tip: element.id,
-            contextMenuItems: [
-              ContextMenuItem(
-                "Delete",
-                action: (details) {
-                  if (element.parent == null) {
-                    debugPrint("Cannot delete element without parent");
-                    return;
-                  }
-                  element.parent!.removeChild(element);
-                },
-              ),
-            ],
+            tip: tip,
+            contextMenuItems: contextMenuChoices,
           ),
         ),
         MyDividers.strongHorizontal,
+        for (var child in children) ...[
+          child,
+          MyDividers.strongHorizontal,
+        ],
+      ],
+    );
+  }
+
+  Widget _elementInspector(UIElement element, BuildContext context) {
+    return _inspectorBuilder(
+      context,
+      element.label,
+      tip: element.id,
+      contextMenuChoices: [
+        ContextMenuItem(
+          "Delete",
+          action: (details) {
+            if (element.parent == null) {
+              debugPrint("Cannot delete element without parent");
+              return;
+            }
+            element.parent!.removeChild(element);
+          },
+        ),
+      ],
+      children: [
         element.size.getEditor(element),
-        //_sizeEditors(element),
-        MyDividers.strongHorizontal,
         if (element is LeafElement) _leafElementInspector(element),
         if (element is BranchElement) _branchElementInspector(element, context),
       ],
     );
   }
 
-  Widget _rootInspector(bool isPage) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+  Widget _rootInspector(BuildContext context) {
+    return _inspectorBuilder(
+      context,
+      root.title,
+      contextMenuChoices: [
+        ContextMenuItem(
+          "Delete",
+          action: (details) {
+            root.folder.removeItem(Session.lastPage.value!);
+            if (root == Session.lastPage.value) {
+              Session.lastPage.value = null;
+            } else if (root == Session.lastComponent.value) {
+              Session.lastComponent.value = null;
+            }
+          },
+        ),
+      ],
       children: [
-        Text(isPage ? "Page" : "Component"),
+        root.variables.getEditor(root),
+        Session.currentProject.value!.variables.getEditor(null),
       ],
     );
   }

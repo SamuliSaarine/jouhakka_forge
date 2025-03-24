@@ -8,7 +8,7 @@ import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 extension ElementHelper on UIElement {}
 
 extension BranchElementHelper on BranchElement {
-  void addElement(UIElementType? type, AddDirection? direction) {
+  void addChildFromType(UIElementType? type, AddDirection? direction) {
     ElementContainer? container = content.value;
     if (container == null) {
       content.value = ElementContainer.singleChildFromType(
@@ -32,6 +32,23 @@ extension BranchElementHelper on BranchElement {
         }
       }
       container.addChild(pickedElement);
+    }
+  }
+
+  void addChild(UIElement child, AddDirection? direction) {
+    ElementContainer? container = content.value;
+    if (container == null) {
+      content.value = ElementContainer(
+        element: this,
+        children: [child],
+        type: SingleChildElementType(),
+      );
+    } else {
+      if (container.type is SingleChildElementType) {
+        container.changeContainerType(
+            FlexElementType(direction?.axis ?? Axis.vertical));
+      }
+      container.addChild(child);
     }
   }
 }

@@ -47,11 +47,7 @@ class _RootSelectorPanelState<T extends ElementRoot>
                 MyIconButton(
                   icon: Icons.note_add_outlined,
                   primaryAction: (_) {
-                    T newItem = T == UIPage
-                        ? UIPage.empty() as T
-                        : UIComponent.empty() as T;
-
-                    widget.rootFolder.addNewItem(newItem);
+                    widget.rootFolder.newItem();
                     setState(() {});
                   },
                 ),
@@ -210,10 +206,7 @@ class _RootSelectorListState<T extends ElementRoot>
             ContextMenuItem(
               "New ${isPage ? "page" : "component"}",
               action: (_) {
-                T newItem =
-                    isPage ? UIPage.empty() as T : UIComponent.empty() as T;
-
-                folder.addNewItem(newItem);
+                folder.newItem();
                 setState(() {});
               },
             ),

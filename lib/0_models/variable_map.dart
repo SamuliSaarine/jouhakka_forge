@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
@@ -11,21 +10,34 @@ class VariableMap {
   VariableMap();
 
   List<String> get keys => _variables.keys.toList();
+  int get length => _variables.length;
 
   void setVariable<T>(String key, Variable<T> value) {
     _variables[key] = value;
     _listeners[key]?.forEach((listener) => listener());
   }
 
-  void setValue<T>(String key, T value) =>
-      setVariable(key, ConstantVariable<T>(value));
+  /// Returns the key of the variable
+  String setValue<T>(String key, T value, {bool forceNew = false}) {
+    if (forceNew && _variables[key] != null) {
+      int i = 1;
+      while (_variables.containsKey(key)) {
+        key = "$key$i";
+        i++;
+      }
+    }
+    setVariable(key, ConstantVariable<T>(value));
+    return key;
+  }
 
   void removeVariable(String key) {
     _variables.remove(key);
     _listeners.remove(key);
   }
 
-  Variable<T> getVariable<T>(String key) {
+  Variable<T> getVariable<T>(
+    String key,
+  ) {
     try {
       return _variables[key] as Variable<T>;
     } catch (e) {
@@ -39,7 +51,16 @@ class VariableMap {
     }
   }
 
-  T getValue<T>(String key) => getVariable<T>(key).value;
+  T getValue<T>(String key) {
+    try {
+      return getVariable<T>(key).value;
+    } catch (e) {
+      if (T == double && _variables[key]?.typeLabel == "Integer") {
+        return getVariable<int>(key).value.toDouble() as T;
+      }
+      rethrow;
+    }
+  }
 
   void addListener(String key, void Function() listener) {
     if (_listeners[key] == null) {
@@ -58,6 +79,19 @@ class VariableMap {
 
 abstract class Variable<T> {
   T get value;
+
+  String get typeLabel {
+    if (T == String) {
+      return "String";
+    } else if (T == double) {
+      return "Number";
+    } else if (T == int) {
+      return "Integer";
+    } else if (T == Color) {
+      return "Color";
+    }
+    return "Unknown";
+  }
 
   const Variable();
 
@@ -280,28 +314,41 @@ class OverrideOpacityVariable extends ListenableVariable<Color> {
 }
 
 class VariableParser {
-  static Variable<T> parse<T>(String input, UIElement element,
+  static Variable<T> parse<T>(String input, ElementRoot? root,
       {required void Function() notifyListeners}) {
     if (T == String) {
-      return _parseString(input, element, notifyListeners) as Variable<T>;
-    } else if (T == num) {
-      return parseNum(input, element, notifyListeners) as Variable<T>;
+      return _parseString(input, root, notifyListeners) as Variable<T>;
     } else if (T == Color) {
-      return _parseColor(input, element, notifyListeners) as Variable<T>;
+      return _parseColor(input, root, notifyListeners) as Variable<T>;
     } else if (T == double) {
-      return parseNum<double>(input, element, notifyListeners) as Variable<T>;
+      return parseNum<double>(input, root, notifyListeners) as Variable<T>;
     } else if (T == int) {
-      return parseNum<int>(input, element, notifyListeners) as Variable<T>;
+      return parseNum<int>(input, root, notifyListeners) as Variable<T>;
     }
     throw Exception("Unsupported type: $T");
   }
 
+  static Variable parseWithLabel(String label, String input, ElementRoot? root,
+      {required void Function() notifyListeners}) {
+    switch (label) {
+      case "String":
+        return _parseString(input, root, notifyListeners);
+      case "Number":
+        return parseNum<double>(input, root, notifyListeners);
+      case "Integer":
+        return parseNum<int>(input, root, notifyListeners);
+      case "Color":
+        return _parseColor(input, root, notifyListeners);
+      default:
+        throw Exception("Unsupported type: $label");
+    }
+  }
+
   static Variable<Color> _parseColor(
-      String input, UIElement element, void Function() notifyListeners) {
+      String input, ElementRoot? root, void Function() notifyListeners) {
     if (input.startsWith('\$')) {
       if (input.startsWith('\$root.')) {
-        return RootVariable<Color>(
-            element.root, input.substring(6), notifyListeners);
+        return RootVariable<Color>(root!, input.substring(6), notifyListeners);
       } else {
         return GlobalVariable<Color>(input.substring(1), notifyListeners);
       }
@@ -332,11 +379,12 @@ class VariableParser {
   }
 
   static Variable<T> parseNum<T extends num>(
-      String input, UIElement element, void Function() notifyListeners,
+      String input, ElementRoot? root, void Function() notifyListeners,
       {bool normalizeDouble = false}) {
     try {
       String lowerCaseInput = input.toLowerCase();
-      if (lowerCaseInput == "inf" || lowerCaseInput == "infinity") {
+      if (T == double &&
+          (lowerCaseInput == "inf" || lowerCaseInput == "infinity")) {
         return ConstantVariable<T>(double.infinity as T);
       }
 
@@ -360,8 +408,8 @@ class VariableParser {
       }
 
       return SumOfVariables<T>(
-        parseNum<T>(parts[0], element, notifyListeners),
-        parseNum<T>(parts[1], element, notifyListeners),
+        parseNum<T>(parts[0], root, notifyListeners),
+        parseNum<T>(parts[1], root, notifyListeners),
       );
     } else if (input.contains(" - ")) {
       var parts = input.split(" - ").map((part) => part.trim()).toList();
@@ -370,8 +418,8 @@ class VariableParser {
       }
 
       return DifferenceOfVariables<T>(
-        parseNum<T>(parts[0], element, notifyListeners),
-        parseNum<T>(parts[1], element, notifyListeners),
+        parseNum<T>(parts[0], root, notifyListeners),
+        parseNum<T>(parts[1], root, notifyListeners),
       );
     } else if (input.contains(" * ")) {
       var parts = input.split(" * ").map((part) => part.trim()).toList();
@@ -380,8 +428,8 @@ class VariableParser {
       }
 
       return ProductOfVariables<T>(
-        parseNum<T>(parts[0], element, notifyListeners),
-        parseNum<T>(parts[1], element, notifyListeners),
+        parseNum<T>(parts[0], root, notifyListeners),
+        parseNum<T>(parts[1], root, notifyListeners),
       );
     } else if (input.contains(" / ")) {
       var parts = input.split(" / ").map((part) => part.trim()).toList();
@@ -390,15 +438,22 @@ class VariableParser {
       }
 
       return QuotientOfVariables(
-        parseNum(parts[0], element, notifyListeners),
-        parseNum(parts[1], element, notifyListeners),
+        parseNum(parts[0], root, notifyListeners),
+        parseNum(parts[1], root, notifyListeners),
       );
     } else if (input.startsWith('\$')) {
       if (input.startsWith('\$root.')) {
-        return RootVariable<T>(
-            element.root, input.substring(6), notifyListeners);
+        String key = input.substring(6);
+        if (!root!.variables.keys.contains(key)) {
+          throw Exception("Root variable $key not found");
+        }
+        return RootVariable<T>(root, key, notifyListeners);
       } else {
-        return GlobalVariable<T>(input.substring(1), notifyListeners);
+        String key = input.substring(1);
+        if (!Session.currentProject.value!.variables.keys.contains(key)) {
+          throw Exception("Global variable $key not found");
+        }
+        return GlobalVariable<T>(key, notifyListeners);
       }
     } else if (input.endsWith('%')) {
       double parsedValue = double.parse(input.substring(0, input.length - 1));
@@ -413,7 +468,7 @@ class VariableParser {
   }
 
   static Variable<String> _parseString(
-      String input, UIElement element, void Function() notifyListeners) {
+      String input, ElementRoot? root, void Function() notifyListeners) {
     if (!input.contains('"')) return ConstantVariable<String>(input);
 
     // Trim leading/trailing spaces and split by the '+' symbol
@@ -437,7 +492,7 @@ class VariableParser {
           // Handle root variable (e.g., $root.somestring)
           variables.add(
             RootVariable<String>(
-              element.root,
+              root!,
               part.substring(6),
               notifyListeners,
             ),

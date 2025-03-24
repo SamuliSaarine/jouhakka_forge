@@ -10,6 +10,8 @@ class ClickDetector extends StatefulWidget {
   final void Function(PointerEnterEvent details)? onEnter;
   final void Function(PointerExitEvent details)? onExit;
   final void Function(PointerEvent details)? onPointerEvent;
+  final void Function(DragStartDetails details)? onPanStart;
+  final void Function(DragEndDetails details)? onPanEnd;
   final bool opaque;
   final Widget? child;
   final Widget Function(bool hovering, bool pressed)? builder;
@@ -29,6 +31,8 @@ class ClickDetector extends StatefulWidget {
     this.onHover,
     this.onPointerEvent,
     this.opaque = true,
+    this.onPanStart,
+    this.onPanEnd,
 
     /// This widget does not directly affect child state
     this.child,
@@ -73,6 +77,8 @@ class _ClickDetectorState extends State<ClickDetector> {
         onTapUp: _handleTapUp,
         onSecondaryTapDown: _handleSecondaryTapDown,
         onSecondaryTapUp: _handleSecondaryTapUp,
+        onPanStart: _handlePanStart,
+        onPanEnd: _handlePanEnd,
         behavior: widget.opaque
             ? HitTestBehavior.opaque
             : HitTestBehavior.translucent,
@@ -125,20 +131,6 @@ class _ClickDetectorState extends State<ClickDetector> {
     }
   }
 
-  /*void _handleLongPressStart(LongPressStartDetails details) {
-    if (widget.secondaryActionDown != null) {
-      TapDownDetails newDetails = TapDownDetails(
-          kind: PointerDeviceKind.mouse,
-          globalPosition: details.globalPosition,
-          localPosition: details.localPosition);
-      widget.secondaryActionDown!(newDetails);
-    } else if (trackState && pressed == false) {
-      setState(() {
-        pressed = true;
-      });
-    }
-  }*/
-
   void _handleTapUp(TapUpDetails details) {
     if (widget.primaryActionUp != null) {
       widget.primaryActionUp!(details);
@@ -150,24 +142,6 @@ class _ClickDetectorState extends State<ClickDetector> {
       });
     }
   }
-
-  /*void _handleLongPressEnd(LongPressEndDetails details) {
-    TapUpDetails translateDetails() => TapUpDetails(
-        kind: PointerDeviceKind.mouse,
-        globalPosition: details.globalPosition,
-        localPosition: details.localPosition);
-    if (widget.secondaryActionUp != null) {
-      widget.secondaryActionUp!(translateDetails());
-    } else if (widget.primaryActionUp != null) {
-      widget.primaryActionUp!(translateDetails());
-    }
-
-    if (pressed) {
-      setState(() {
-        pressed = false;
-      });
-    }
-  }*/
 
   void _handleSecondaryTapDown(TapDownDetails details) {
     if (widget.secondaryActionDown != null) {
@@ -189,5 +163,13 @@ class _ClickDetectorState extends State<ClickDetector> {
         pressed = false;
       });
     }
+  }
+
+  void _handlePanStart(DragStartDetails details) {
+    widget.onPanStart?.call(details);
+  }
+
+  void _handlePanEnd(DragEndDetails details) {
+    widget.onPanEnd?.call(details);
   }
 }

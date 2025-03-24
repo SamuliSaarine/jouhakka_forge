@@ -11,10 +11,10 @@ class HeadPropertyBox extends StatefulWidget {
   final List<Widget> children;
   const HeadPropertyBox({
     super.key,
-    required this.children,
     required this.title,
     required this.tip,
     required this.contextMenuItems,
+    required this.children,
   });
 
   @override
@@ -65,11 +65,11 @@ class SubPropertyBox extends StatefulWidget {
   final Widget? sideChild;
   const SubPropertyBox({
     super.key,
-    required this.children,
     required this.title,
     required this.tip,
     required this.contextMenuItems,
     this.sideChild,
+    required this.children,
   });
 
   @override

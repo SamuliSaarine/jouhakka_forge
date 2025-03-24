@@ -322,7 +322,7 @@ extension ContainerElementEditor on ElementContainerType {
           controller: spacingController,
           onSubmitted: (value) {
             try {
-              type.spacing = VariableParser.parse<double>(value, element,
+              type.spacing = VariableParser.parse<double>(value, element.root,
                   notifyListeners: notifyListeners);
               return true;
             } catch (e) {
@@ -617,7 +617,7 @@ extension RadiusEditor on MyRadius {
             onSubmitted: (value) {
               try {
                 Variable<double> newVar = VariableParser.parse<double>(
-                    value, element,
+                    value, element.root,
                     notifyListeners: notifyListeners);
                 onChanged(newVar);
                 return true;

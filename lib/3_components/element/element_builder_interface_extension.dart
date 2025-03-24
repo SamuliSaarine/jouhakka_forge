@@ -5,7 +5,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
     if (HardwareKeyboard.instance.isShiftPressed && element is BranchElement) {
       AddDirection? direction = _calculateDirection(details.localPosition);
       //debugPrint("Direction: $direction");
-      (element as BranchElement).addElement(
+      (element as BranchElement).addChildFromType(
         null,
         direction,
       );
@@ -21,7 +21,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
       AddDirection? direction = _calculateDirection(details.localPosition);
       UIElementType? type = await _pickChild(details.globalPosition);
       if (type != null) {
-        (element as BranchElement).addElement(type, direction);
+        (element as BranchElement).addChildFromType(type, direction);
       }
     } else {
       ContextMenu.open(
@@ -33,7 +33,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
             ContextMenuItem("New element", action: (_) {
               AddDirection? direction =
                   _calculateDirection(details.localPosition);
-              (element as BranchElement).addElement(null, direction);
+              (element as BranchElement).addChildFromType(null, direction);
             }),
           //Pick element
           if (element is BranchElement)
@@ -42,7 +42,7 @@ extension _ElementBuilderInterfaceExtension on _ElementBuilderInterfaceState {
                   _calculateDirection(details.localPosition);
               UIElementType? type = await _pickChild(details.globalPosition);
               if (type != null) {
-                (element as BranchElement).addElement(type, direction);
+                (element as BranchElement).addChildFromType(type, direction);
               }
             }),
           //Wrap element

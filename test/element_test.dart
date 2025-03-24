@@ -33,7 +33,7 @@ void main() {
       setUp(() {
         initializePage();
         body = Session.lastPage.value!.body as BranchElement;
-        body.addElement(UIElementType.box, null);
+        body.addChildFromType(UIElementType.box, null);
       });
 
       void childRelationsCheck(UIElement child) {
@@ -65,7 +65,7 @@ void main() {
       });
 
       test('Column test', () {
-        body.addElement(null, AddDirection.bottom);
+        body.addChildFromType(null, AddDirection.bottom);
         ElementContainer container = body.content.value!;
         expect(container.children.length, 2);
         expect(container.type, isA<FlexElementType>());
@@ -82,7 +82,7 @@ void main() {
       });
 
       test('Remove test', () {
-        body.addElement(null, AddDirection.bottom);
+        body.addChildFromType(null, AddDirection.bottom);
         expect(body.content.value!.children.length, 2);
         ElementContainer container = body.content.value!;
         container.removeChild(container.children.last);
@@ -92,7 +92,7 @@ void main() {
       });
 
       test('Row test', () {
-        body.addElement(null, AddDirection.right);
+        body.addChildFromType(null, AddDirection.right);
         expect((body.content.value!.type as FlexElementType).direction,
             Axis.horizontal);
       });

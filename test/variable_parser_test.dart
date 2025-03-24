@@ -10,11 +10,11 @@ void main() {
   group('VariableParser Tests', () {
     group('String parser tests', () {
       test('Simple string constant', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
         Variable<String> result = VariableParser.parse<String>(
-            '"Hello World"', element,
+            '"Hello World"', root,
             notifyListeners: () {});
         expect(result, isA<ConstantVariable<String>>());
         expect((result as ConstantVariable<String>).value, "Hello World");
@@ -23,11 +23,11 @@ void main() {
       test(
         'String concatenation with constants',
         () {
-          ElementRoot root = UIPage.empty();
-          UIElement element = BranchElement(root: root, parent: null);
+          ElementRoot root =
+              UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
           Variable<String> result = VariableParser.parse<String>(
-              '"Hello" + " " + "World"', element,
+              '"Hello" + " " + "World"', root,
               notifyListeners: () {});
           expect(result, isA<ConstantVariable<String>>());
           expect((result as ConstantVariable<String>).value, "Hello World");
@@ -41,11 +41,10 @@ void main() {
           project.variables
               .setVariable("globalString", ConstantVariable("World"));
           Session.currentProject.value = project;
-          ElementRoot root = UIPage.empty();
-          UIElement element = BranchElement(root: root, parent: null);
+          ElementRoot root = project.pages.first!;
 
           Variable<String> result = VariableParser.parse<String>(
-              '"Hello" + \$globalString', element,
+              '"Hello" + \$globalString', root,
               notifyListeners: () {});
           expect(result, isA<StringFromVariables>());
           var stringFromVariables = result as StringFromVariables;
@@ -63,11 +62,12 @@ void main() {
       test(
         'String concatenation with root variable',
         () {
-          ElementRoot root = UIPage.empty();
+          ElementRoot root = UIPage.empty(
+            folder: ElementRootFolder("Pages", parent: null),
+          );
           root.variables.setVariable("name", ConstantVariable("World"));
-          UIElement element = BranchElement(root: root, parent: null);
           var result = VariableParser.parse<String>(
-              '"Hello" + \$root.name', element,
+              '"Hello" + \$root.name', root,
               notifyListeners: () {});
           expect(result, isA<StringFromVariables>());
           var stringFromVariables = result as StringFromVariables;
@@ -88,11 +88,10 @@ void main() {
           project.variables
               .setVariable("globalString", ConstantVariable("World"));
           Session.currentProject.value = project;
-          ElementRoot root = UIPage.empty();
+          ElementRoot root = project.pages.first!;
           root.variables.setVariable("name", ConstantVariable("Page"));
-          UIElement element = BranchElement(root: root, parent: null);
           var result = VariableParser.parse<String>(
-              '"Hello" + \$globalString + " " + \$root.name', element,
+              '"Hello" + \$globalString + " " + \$root.name', root,
               notifyListeners: () {});
           expect(result, isA<StringFromVariables>());
           var stringFromVariables = result as StringFromVariables;
@@ -118,11 +117,10 @@ void main() {
         project.variables
             .setVariable("globalString", ConstantVariable("World"));
         Session.currentProject.value = project;
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root = project.pages.first!;
         expect(
             () => VariableParser.parse<String>(
-                '"Hello" + \$globalString + 123', element,
+                '"Hello" + \$globalString + 123', root,
                 notifyListeners: () {}),
             throwsException);
       });
@@ -132,10 +130,9 @@ void main() {
         project.variables
             .setVariable("globalString", ConstantVariable("World"));
         Session.currentProject.value = project;
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root = project.pages.first!;
         var result = VariableParser.parse<String>(
-            '"Hello"  +  \$globalString  + " "  +  \$root.name', element,
+            '"Hello"  +  \$globalString  + " "  +  \$root.name', root,
             notifyListeners: () {});
         expect(result, isA<StringFromVariables>());
         var stringFromVariables = result as StringFromVariables;
@@ -157,60 +154,60 @@ void main() {
 
     group("Num parser tests", () {
       test('Simple number constant', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
         Variable<num> result =
-            VariableParser.parse<num>('123', element, notifyListeners: () {});
+            VariableParser.parse<num>('123', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<num>>());
         expect((result as ConstantVariable<num>).value, 123);
       });
 
       test('Simple number constant with decimal', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<num> result = VariableParser.parse<num>('123.456', element,
-            notifyListeners: () {});
+        Variable<num> result =
+            VariableParser.parse<num>('123.456', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<num>>());
         expect((result as ConstantVariable<num>).value, 123.456);
       });
 
       test('Simple number constant with negative sign', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<num> result = VariableParser.parse<num>('-123.456', element,
-            notifyListeners: () {});
+        Variable<num> result =
+            VariableParser.parse<num>('-123.456', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<num>>());
         expect((result as ConstantVariable<num>).value, -123.456);
       });
 
       test('Simple number constant with positive sign', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<num> result = VariableParser.parse<num>('+123.456', element,
-            notifyListeners: () {});
+        Variable<num> result =
+            VariableParser.parse<num>('+123.456', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<num>>());
         expect((result as ConstantVariable<num>).value, 123.456);
       });
 
       test('Simple number constant with exponent', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<num> result = VariableParser.parse<num>('123.456e3', element,
+        Variable<num> result = VariableParser.parse<num>('123.456e3', root,
             notifyListeners: () {});
         expect(result, isA<ConstantVariable<num>>());
         expect((result as ConstantVariable<num>).value, 123456);
       });
 
       test('Simple number constant with negative exponent', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<num> result = VariableParser.parse<num>('123.456e-3', element,
+        Variable<num> result = VariableParser.parse<num>('123.456e-3', root,
             notifyListeners: () {});
         expect(result, isA<ConstantVariable<num>>());
         expect((result as ConstantVariable<num>).value, 0.123456);
@@ -219,10 +216,10 @@ void main() {
 
     group("Color parser tests", () {
       test('Simple color constant', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<Color> result = VariableParser.parse<Color>('#FF0000', element,
+        Variable<Color> result = VariableParser.parse<Color>('#FF0000', root,
             notifyListeners: () {});
         expect(result, isA<ConstantVariable<Color>>());
         expect(
@@ -230,11 +227,10 @@ void main() {
       });
 
       test('Simple color constant with alpha', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<Color> result = VariableParser.parse<Color>(
-            '#80FF0000', element,
+        Variable<Color> result = VariableParser.parse<Color>('#80FF0000', root,
             notifyListeners: () {});
         expect(result, isA<ConstantVariable<Color>>());
         expect(
@@ -242,21 +238,22 @@ void main() {
       });
 
       test('Simple color constant with alpha and short format', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
-        Variable<Color> result = VariableParser.parse<Color>('#8F0', element,
-            notifyListeners: () {});
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
+
+        Variable<Color> result =
+            VariableParser.parse<Color>('#8F0', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<Color>>());
         expect(
             (result as ConstantVariable<Color>).value, const Color(0xFF88FF00));
       });
 
       test('Simple color constant with alpha and short format with alpha', () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<Color> result = VariableParser.parse<Color>('#8F00', element,
-            notifyListeners: () {});
+        Variable<Color> result =
+            VariableParser.parse<Color>('#8F00', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<Color>>());
         expect(
             (result as ConstantVariable<Color>).value, const Color(0x88FF0000));
@@ -264,11 +261,11 @@ void main() {
 
       test('Simple color constant with alpha and short format with alpha 2',
           () {
-        ElementRoot root = UIPage.empty();
-        UIElement element = BranchElement(root: root, parent: null);
+        ElementRoot root =
+            UIPage.empty(folder: ElementRootFolder("Pages", parent: null));
 
-        Variable<Color> result = VariableParser.parse<Color>('#8F8', element,
-            notifyListeners: () {});
+        Variable<Color> result =
+            VariableParser.parse<Color>('#8F8', root, notifyListeners: () {});
         expect(result, isA<ConstantVariable<Color>>());
         expect(
             (result as ConstantVariable<Color>).value, const Color(0xFF88FF88));

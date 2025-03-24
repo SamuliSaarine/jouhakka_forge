@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
@@ -10,6 +11,7 @@ import 'package:jouhakka_forge/3_components/buttons/my_text_button.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/branch_inspector_modules.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
+import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
 import 'package:jouhakka_forge/3_components/layout/context_popup.dart';
 import 'package:jouhakka_forge/3_components/layout/floating_bar.dart'
     show FloatingBar, FloatingBarDecoration;
@@ -162,11 +164,16 @@ extension SizeEditor on SizeHolder {
                 controller: axis == Axis.vertical
                     ? heightControllers.fixedController!
                     : widthControllers.fixedController!,
+                onTap: () {
+                  selectBoth = HardwareKeyboard.instance.isShiftPressed ||
+                      HardwareKeyboard.instance.isControlPressed ||
+                      HardwareKeyboard.instance.isMetaPressed;
+                },
                 onSubmitted: (value) {
                   try {
                     Variable<double> newVar = VariableParser.parse<double>(
                       value,
-                      element,
+                      element.root,
                       notifyListeners: notifyListeners,
                     );
                     onChanged(ControlledSize(newVar));
@@ -189,10 +196,15 @@ extension SizeEditor on SizeHolder {
                         HintType.prefix,
                         text: "Min ",
                       ),
+                      onTap: () {
+                        selectBoth = HardwareKeyboard.instance.isShiftPressed ||
+                            HardwareKeyboard.instance.isControlPressed ||
+                            HardwareKeyboard.instance.isMetaPressed;
+                      },
                       onSubmitted: (value) {
                         try {
                           Variable<double> newVar =
-                              VariableParser.parse<double>(value, element,
+                              VariableParser.parse<double>(value, element.root,
                                   notifyListeners: notifyListeners);
 
                           onChanged(axisSize.clone(min: newVar));
@@ -215,10 +227,15 @@ extension SizeEditor on SizeHolder {
                         HintType.prefix,
                         text: "Max ",
                       ),
+                      onTap: () {
+                        selectBoth = HardwareKeyboard.instance.isShiftPressed ||
+                            HardwareKeyboard.instance.isControlPressed ||
+                            HardwareKeyboard.instance.isMetaPressed;
+                      },
                       onSubmitted: (value) {
                         try {
                           Variable<double> newVar =
-                              VariableParser.parse<double>(value, element,
+                              VariableParser.parse<double>(value, element.root,
                                   notifyListeners: notifyListeners);
 
                           onChanged(axisSize.clone(max: newVar));
@@ -242,10 +259,16 @@ extension SizeEditor on SizeHolder {
                           HintType.prefix,
                           text: "Flex ",
                         ),
+                        onTap: () {
+                          selectBoth =
+                              HardwareKeyboard.instance.isShiftPressed ||
+                                  HardwareKeyboard.instance.isControlPressed ||
+                                  HardwareKeyboard.instance.isMetaPressed;
+                        },
                         onSubmitted: (value) {
                           try {
                             Variable<int> newVar = VariableParser.parse<int>(
-                                value, element,
+                                value, element.root,
                                 notifyListeners: notifyListeners);
 
                             onChanged(axisSize.clone(flex: newVar));
@@ -305,7 +328,7 @@ extension VariableEditor<T> on VarField<T> {
           hint: hint,
           onSubmitted: (value) {
             try {
-              variable = VariableParser.parse<T>(value, element,
+              variable = VariableParser.parse<T>(value, element.root,
                   notifyListeners: notifyListeners);
               afterSet?.call();
               return true;
@@ -335,7 +358,8 @@ extension ColorEditor on VarField<Color> {
 
     bool onOpacitySubmitted(String value) {
       try {
-        Variable<double> opacity = VariableParser.parse<double>(value, element,
+        Variable<double> opacity = VariableParser.parse<double>(
+            value, element.root,
             notifyListeners: notifyListeners);
         if (opacity.value < 0 || opacity.value > 1) {
           debugPrint("Opacity value must be between 0 and 100");
@@ -685,7 +709,7 @@ extension MyPaddingEditor on MyPadding {
             onSubmitted: (value) {
               try {
                 Variable<double> newVar = VariableParser.parse<double>(
-                    value, element,
+                    value, element.root,
                     notifyListeners: notifyListeners);
                 onChanged(newVar);
                 return true;
@@ -854,6 +878,111 @@ class _EnumEditorState<T extends Enum> extends State<EnumEditor<T>> {
   }
 }
 
-extension EnumValues<T extends Enum> on Type {
-  List<T> get values => (T.values as List<T>);
+extension VariableMapEditor on VariableMap {
+  getEditor(ElementRoot? root) {
+    Widget variableEditor(String key, void Function() onChanged) {
+      Variable variable = getVariable(key);
+      return PropertyFieldBox(
+        title: key,
+        tip: "",
+        contextMenuItems: [
+          ContextMenuItem(
+            "Delete",
+            action: (details) {
+              removeVariable(key);
+              onChanged();
+            },
+          ),
+        ],
+        content: Row(
+          children: [
+            ClickDetector(
+                primaryActionUp: (details) {},
+                builder: (hovering, pressed) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: MyColors.storm,
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text(
+                      variable.typeLabel,
+                      style: MyTextStyles.smallTip,
+                    ),
+                  );
+                }),
+            Gap.w4,
+            Expanded(
+              child: MyTextField(
+                controller: TextEditingController(
+                  text: variable.toString(),
+                ),
+                onSubmitted: (input) {
+                  try {
+                    final newVar = VariableParser.parseWithLabel(
+                        variable.typeLabel, input, root, notifyListeners: () {
+                      debugPrint("VariableChanged");
+                    });
+                    setVariable(key, newVar);
+                    onChanged();
+                    return true;
+                  } catch (e) {
+                    debugPrint("Error parsing variable: $e");
+                    return false;
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return StatefulBuilder(builder: (context, setState) {
+      return HeadPropertyBox(
+        title: "${root?.type() ?? "Project"} variables",
+        tip:
+            "Variables that are tied to this ${root?.type(capital: false) ?? "project"}",
+        contextMenuItems: [
+          ContextMenuItem(
+            "Add num variable",
+            action: (details) {
+              setValue<double>("num", 0.0, forceNew: true);
+              setState(() {});
+            },
+          ),
+          ContextMenuItem(
+            "Add int variable",
+            action: (details) {
+              setValue<int>("int", 0, forceNew: true);
+              setState(() {});
+            },
+          ),
+          ContextMenuItem(
+            "Add string variable",
+            action: (details) {
+              setValue<String>("string", "Text", forceNew: true);
+              setState(() {});
+            },
+          ),
+          ContextMenuItem("Add color variable", action: (details) {
+            setValue<Color>(
+              "color",
+              Colors.white,
+              forceNew: true,
+            );
+            setState(() {});
+          }),
+        ],
+        children: [
+          for (var varKey in keys)
+            variableEditor(varKey, () => setState(() {})),
+        ],
+      );
+    });
+  }
 }

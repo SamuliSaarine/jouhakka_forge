@@ -10,13 +10,14 @@ class UIComponent extends ElementRoot {
   /// [UIComponent]s are designed to be used as a child of another [UIElement] so even you can edit [UIComponent] individually, it must have instances inside another [ElementRoot]s to be useful.
   UIComponent({
     required super.title,
+    required super.folder,
     UIElement? body,
   }) : super(id: IDService.newID('c')) {
     this.body = body ?? BranchElement.defaultBox(this, parent: null);
   }
 
-  factory UIComponent.empty() {
-    final component = UIComponent(title: "New Component");
+  factory UIComponent.empty({required ElementRootFolder folder}) {
+    final component = UIComponent(title: "New Component", folder: folder);
     return component;
   }
 

@@ -41,24 +41,24 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
   @override
   Widget build(BuildContext context) {
     return ChangeListener(
-        source: widget.parentElement?.childNotifier ?? widget.root,
-        builder: () {
-          int newLength = widget.parentElement?.children.length ?? 1;
-          if (newLength > length) {
-            expandedContainers.add(length);
-          }
-          length = newLength;
+      source: widget.parentElement?.childNotifier ?? widget.root,
+      builder: () {
+        int newLength = widget.parentElement?.children.length ?? 1;
+        if (newLength > length) {
+          expandedContainers.add(length);
+        }
+        length = newLength;
 
-          //debugPrint("Updating ElementSelectorList");
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (int index = 0; index < length; index++)
-                _resolveWidget(index),
-            ],
-          );
-        });
+        //debugPrint("Updating ElementSelectorList");
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int index = 0; index < length; index++) _resolveWidget(index),
+          ],
+        );
+      },
+    );
   }
 
   Widget _resolveWidget(int index) {
@@ -131,6 +131,7 @@ class _ElementSelectorListState extends State<ElementSelectorList> {
       primaryActionDown: (_) {
         widget.onSelection(item);
       },
+      onPanStart: (details) {},
       builder: (hovering, _) => ValueListener(
         source: Session.selectedElement,
         builder: (selectedElement) {
