@@ -212,4 +212,24 @@ enum AddDirection {
   Axis get axis => this == AddDirection.top || this == AddDirection.bottom
       ? Axis.vertical
       : Axis.horizontal;
+
+  static AddDirection fromString(String value) {
+    switch (value) {
+      case "top":
+        return AddDirection.top;
+      case "bottom":
+        return AddDirection.bottom;
+      case "left":
+        return AddDirection.left;
+      case "right":
+        return AddDirection.right;
+      case "vertical":
+        debugPrint("Gaven vertical, returning bottom");
+        return AddDirection.bottom;
+      case "horizontal":
+        debugPrint("Gaven horizontal, returning right");
+        return AddDirection.right;
+    }
+    throw Exception("Invalid AddDirection: $value");
+  }
 }

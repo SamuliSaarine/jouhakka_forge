@@ -65,3 +65,20 @@ class HoldOrToggle extends ChangeNotifier {
   bool get xor => _toggle != _hold;
   bool get xnor => _toggle == _hold;
 }
+
+class ActionArgument {
+  final String name;
+  final String value;
+
+  const ActionArgument({required this.name, required this.value});
+
+  ActionArgument.fromJson(Map<String, dynamic> json)
+      : name = json['name'] as String,
+        value = json['value'] as String;
+
+  static List<ActionArgument> fromJsonList(List<dynamic> jsonList) {
+    return jsonList
+        .map((json) => ActionArgument.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+}

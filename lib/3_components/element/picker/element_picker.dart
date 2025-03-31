@@ -118,5 +118,21 @@ enum UIElementType {
   box,
   text,
   image,
-  icon,
+  icon;
+
+  static UIElementType fromString(String value) {
+    switch (value) {
+      case 'empty':
+        return UIElementType.empty;
+      case 'box':
+        return UIElementType.box;
+      case 'text':
+        return UIElementType.text;
+      case 'image':
+        return UIElementType.image;
+      case 'icon':
+        return UIElementType.icon;
+    }
+    throw UnimplementedError('UIElementType for $value is not implemented');
+  }
 }

@@ -7,24 +7,24 @@ part of 'media_elements.dart';
 // **************************************************************************
 
 extension TextElementNotifyExtension on TextElement {
-  String get text => _text;
-  set text(String value) {
+  Variable<String> get text => _text;
+  set text(Variable<String> value) {
     if (_text == value) return;
     _text = value;
 
     notifyListeners();
   }
 
-  Color get color => _color;
-  set color(Color value) {
+  Variable<Color> get color => _color;
+  set color(Variable<Color> value) {
     if (_color == value) return;
     _color = value;
 
     notifyListeners();
   }
 
-  double get fontSize => _fontSize;
-  set fontSize(double value) {
+  Variable<double> get fontSize => _fontSize;
+  set fontSize(Variable<double> value) {
     if (_fontSize == value) return;
     _fontSize = value;
 
@@ -91,8 +91,8 @@ extension IconElementNotifyExtension on IconElement {
     notifyListeners();
   }
 
-  Color get color => _color;
-  set color(Color value) {
+  Variable<Color> get color => _color;
+  set color(Variable<Color> value) {
     if (_color == value) return;
     _color = value;
 

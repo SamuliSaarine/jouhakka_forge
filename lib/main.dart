@@ -6,6 +6,7 @@ import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
 import 'package:jouhakka_forge/4_views/editor_view.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
+import 'package:jouhakka_forge/5_style/icons/lucide_map.dart';
 import 'package:web/web.dart' as web;
 // Purpose of this app is to offer tools to quickly create responsive UI design for apps and websites.
 
@@ -23,6 +24,8 @@ void main() {
       : PlatformDispatcher.instance.platformBrightness == Brightness.dark;
 
   debugPrint('Dark mode: ${MyColors.darkMode.value}');
+
+  initializeFirstLetterIndexes();
 
   runApp(const MainApp());
 }

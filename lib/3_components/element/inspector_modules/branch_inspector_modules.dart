@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
@@ -10,7 +8,6 @@ import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/click_detector.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/a_inspector_modules.dart';
 import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
-import 'package:jouhakka_forge/3_components/layout/floating_bar.dart';
 import 'package:jouhakka_forge/3_components/layout/gap.dart';
 import 'package:jouhakka_forge/3_components/layout/inspector_boxes.dart';
 import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';

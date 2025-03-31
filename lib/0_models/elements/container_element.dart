@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
+import 'package:jouhakka_forge/1_helpers/extensions.dart';
+import 'package:jouhakka_forge/2_services/actions.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import '../../3_components/element/ui_element_component.dart';
@@ -58,7 +62,7 @@ class ElementContainer extends ChangeNotifier {
     super.notifyListeners();
   }
 
-  void addChild(UIElement child) {
+  UIElement addChild(UIElement child) {
     if (type is SingleChildElementType && children.isNotEmpty) {
       throw Exception(
           "SingleChildElementType can only have one child. Change the container type first.");
@@ -77,6 +81,7 @@ class ElementContainer extends ChangeNotifier {
     }*/
     children.add(child);
     childNotifier.notifyListeners();
+    return child;
   }
 
   void removeChild(UIElement child) {
@@ -182,10 +187,141 @@ class ElementContainer extends ChangeNotifier {
     return newElement;
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      "padding": padding.toJson(),
+      "overflow": overflow.toString(),
+      "type": type.toJson(),
+      "children": children.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  static ElementContainer? tryFromJson(
+      Map<String, dynamic>? json, BranchElement element) {
+    if (json == null) return null;
+    try {
+      return ElementContainer.fromJson(json, element, element.root);
+    } catch (e, s) {
+      debugPrint("Error in ElementContainer.fromJson: $e $s");
+      return null;
+    }
+  }
+
+  ElementContainer.fromJson(
+      Map<String, dynamic> json, this.element, ElementRoot root)
+      : _type = ElementContainerType.fromJson(json["type"], root) {
+    if (json.containsKey("padding")) {
+      _padding = MyPadding.fromJson(json["padding"], root, notifyListeners);
+    }
+
+    String? overflowString = json["overflow"];
+    for (ContentOverflow value in ContentOverflow.values) {
+      if (value.toString() == overflowString) {
+        overflow = value;
+        break;
+      }
+    }
+    List<Map<String, dynamic>>? childrenJson =
+        (json["children"] as List?)?.cast<Map<String, dynamic>>();
+    if (childrenJson != null) {
+      for (Map<String, dynamic> childJson in childrenJson) {
+        UIElement? child = UIElement.tryFromJson(childJson, root, this);
+        if (child != null) {
+          children.add(child);
+        }
+      }
+    }
+    if (children.isEmpty) {
+      element.content.value = null;
+    }
+  }
+
+  UpdateAction? setValue(String property, String value) {
+    switch (property) {
+      case "padding":
+        var old = padding;
+        padding = MyPadding.fromJson(
+            jsonDecode(value), element.root, notifyListeners);
+        return UpdateAction<MyPadding>(
+          oldValue: old,
+          newValue: padding,
+          set: (v) => padding = v,
+        );
+      case "overflow":
+        var old = overflow;
+        overflow = ContentOverflow.fromString(value);
+        return UpdateAction<ContentOverflow>(
+          oldValue: old,
+          newValue: overflow,
+          set: (v) => overflow = v,
+        );
+      case "type":
+        var old = type;
+        type = ElementContainerType.fromJson(jsonDecode(value), element.root);
+        return UpdateAction<ElementContainerType>(
+          oldValue: old,
+          newValue: type,
+          set: (v) => type = v,
+        );
+    }
+    if (property.startsWith("type.")) {
+      String subProperty = property.substring(5);
+      return type.setValue(subProperty, value, element.root);
+    } else {
+      debugPrint("Unknown property: $property");
+      return null;
+    }
+  }
+
+  UpdateAction? handleAction(String action, Map<String, String> args) {
+    try {
+      if (action == "setPadding") {
+        MyPadding old = padding;
+        padding = MyPadding.fromAction(args, element.root, old);
+        return UpdateAction<MyPadding>(
+          oldValue: old,
+          newValue: padding,
+          set: (v) => padding = v,
+        );
+      } else if (action == "setOverflow") {
+        ContentOverflow old = overflow;
+        overflow = ContentOverflow.fromString(args["overflow"]!);
+        return UpdateAction<ContentOverflow>(
+          oldValue: old,
+          newValue: overflow,
+          set: (v) => overflow = v,
+        );
+      } else {}
+    } catch (e) {
+      debugPrint("Error in handleAction: $e");
+      return null;
+    }
+  }
+
   String get label => type.label;
 }
 
-enum ContentOverflow { allow, clip, horizontalScroll, verticalScroll }
+enum ContentOverflow {
+  allow,
+  clip,
+  horizontalScroll,
+  verticalScroll;
+
+  static ContentOverflow fromString(String value) {
+    switch (value) {
+      case "allow":
+        return ContentOverflow.allow;
+      case "clip":
+        return ContentOverflow.clip;
+      case "horizontalScroll":
+        return ContentOverflow.horizontalScroll;
+      case "verticalScroll":
+        return ContentOverflow.verticalScroll;
+      default:
+        throw Exception("Unknown ContentOverflow value: $value");
+    }
+  }
+}
 
 abstract class ElementContainerType extends ChangeNotifier {
   /// Returns a [Widget] that contains the children.
@@ -200,6 +336,25 @@ abstract class ElementContainerType extends ChangeNotifier {
   void notifyListeners() {
     super.notifyListeners();
   }
+
+  Map<String, dynamic> toJson();
+
+  static ElementContainerType fromJson(
+      Map<String, dynamic> json, ElementRoot root) {
+    String type = json["type"];
+    switch (type) {
+      case "single":
+        return SingleChildElementType.fromJson(json);
+      case "flex":
+        return FlexElementType.fromJson(json, root);
+      default:
+        throw Exception("Unknown container type: $type");
+    }
+  }
+
+  UpdateAction? setValue(String property, String value, ElementRoot root);
+
+  UpdateAction? handleAction(String action, Map<String, String> args);
 }
 
 @notifier
@@ -208,6 +363,7 @@ class SingleChildElementType extends ElementContainerType {
   Alignment _alignment = Alignment.center;
 
   /// [ElementContainerType] that can only have one child.
+  SingleChildElementType();
 
   @override
   Widget getWidget(List<Widget> children, {bool align = true}) {
@@ -256,6 +412,54 @@ class SingleChildElementType extends ElementContainerType {
     if (other is SingleChildElementType) {
       alignment = other.alignment;
     }
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "single",
+      "alignment": alignment.toJson(),
+    };
+  }
+
+  SingleChildElementType.fromJson(Map<String, dynamic> json) {
+    alignment = AlignmentExtension.fromString(json["alignment"],
+        defaultValue: Alignment.center);
+  }
+
+  @override
+  UpdateAction? setValue(String property, String value, ElementRoot root) {
+    switch (property) {
+      case "alignment":
+        var old = alignment;
+        alignment = AlignmentExtension.fromString(value,
+            defaultValue: Alignment.center);
+        return UpdateAction<Alignment>(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+    }
+    return null;
+  }
+
+  @override
+  UpdateAction? handleAction(String action, Map<String, String> args) {
+    try {
+      if (action == "setAlignment") {
+        Alignment old = alignment;
+        alignment = AlignmentExtension.fromString(args["alignment"]!,
+            defaultValue: Alignment.center);
+        return UpdateAction<Alignment>(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+      }
+    } catch (e) {
+      debugPrint("Error in handleAction: $e");
+    }
+    return null;
   }
 
   @override
@@ -345,6 +549,138 @@ class FlexElementType extends ElementContainerType {
 
   @override
   String get label => "Flex";
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "flex",
+      "direction": direction.toString(),
+      "mainAxisAlignment": mainAxisAlignment.toString(),
+      "crossAxisAlignment": crossAxisAlignment.toString(),
+      "spacing": spacing.toString(),
+    };
+  }
+
+  FlexElementType.fromJson(Map<String, dynamic> json, ElementRoot root) {
+    direction =
+        json["direction"] == "vertical" ? Axis.vertical : Axis.horizontal;
+
+    String? mainAxisString = json["mainAxisAlignment"];
+    for (MainAxisAlignment value in MainAxisAlignment.values) {
+      if (value.toString() == mainAxisString) {
+        mainAxisAlignment = value;
+        break;
+      }
+    }
+
+    String? crossAxisString = json["crossAxisAlignment"];
+    for (CrossAxisAlignment value in CrossAxisAlignment.values) {
+      if (value.toString() == crossAxisString) {
+        crossAxisAlignment = value;
+        break;
+      }
+    }
+
+    if (json.containsKey("spacing")) {
+      spacing = VariableParser.parse<double>(json['spacing'], root,
+          notifyListeners: notifyListeners);
+    }
+  }
+
+  @override
+  UpdateAction? setValue(String property, String value, ElementRoot root) {
+    switch (property) {
+      case "direction":
+        var old = direction;
+        direction = value == "vertical" ? Axis.vertical : Axis.horizontal;
+        return UpdateAction<Axis>(
+          oldValue: old,
+          newValue: direction,
+          set: (v) => direction = v,
+        );
+      case "mainAxisAlignment":
+        var old = mainAxisAlignment;
+        mainAxisAlignment = MainAxisAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => MainAxisAlignment.start);
+        return UpdateAction<MainAxisAlignment>(
+          oldValue: old,
+          newValue: mainAxisAlignment,
+          set: (v) => mainAxisAlignment = v,
+        );
+      case "crossAxisAlignment":
+        var old = crossAxisAlignment;
+        crossAxisAlignment = CrossAxisAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => CrossAxisAlignment.start);
+        return UpdateAction<CrossAxisAlignment>(
+          oldValue: old,
+          newValue: crossAxisAlignment,
+          set: (v) => crossAxisAlignment = v,
+        );
+      case "spacing":
+        var old = spacing;
+        spacing = VariableParser.parse<double>(value, root,
+            notifyListeners: notifyListeners);
+        return UpdateAction<Variable<double>>(
+          oldValue: old,
+          newValue: spacing,
+          set: (v) => spacing = v,
+        );
+    }
+    return null;
+  }
+
+  @override
+  UpdateAction? handleAction(String action, Map<String, String> args,
+      {ElementRoot? root}) {
+    try {
+      if (action == "setDirection") {
+        Axis old = direction;
+        direction =
+            args["direction"] == "vertical" ? Axis.vertical : Axis.horizontal;
+        return UpdateAction<Axis>(
+          oldValue: old,
+          newValue: direction,
+          set: (v) => direction = v,
+        );
+      } else if (action == "setMainAxisAlignment") {
+        MainAxisAlignment old = mainAxisAlignment;
+        mainAxisAlignment = MainAxisAlignment.values.firstWhere(
+            (e) => e.toString() == args["mainAxisAlignment"],
+            orElse: () => MainAxisAlignment.start);
+        return UpdateAction<MainAxisAlignment>(
+          oldValue: old,
+          newValue: mainAxisAlignment,
+          set: (v) => mainAxisAlignment = v,
+        );
+      } else if (action == "setCrossAxisAlignment") {
+        CrossAxisAlignment old = crossAxisAlignment;
+        crossAxisAlignment = CrossAxisAlignment.values.firstWhere(
+            (e) => e.toString() == args["crossAxisAlignment"],
+            orElse: () => CrossAxisAlignment.start);
+        return UpdateAction<CrossAxisAlignment>(
+          oldValue: old,
+          newValue: crossAxisAlignment,
+          set: (v) => crossAxisAlignment = v,
+        );
+      } else if (action == "setSpacing") {
+        Variable<double> old = spacing;
+        spacing = VariableParser.parse<double>(args["spacing"]!, root,
+            notifyListeners: notifyListeners);
+        return UpdateAction<Variable<double>>(
+          oldValue: old,
+          newValue: spacing,
+          set: (v) => spacing = v,
+        );
+      } else {
+        return null;
+      }
+    } catch (e) {
+      debugPrint("Error in handleAction: $e");
+      return null;
+    }
+  }
 }
 
 //StackElement
@@ -376,7 +712,44 @@ class StackElementType extends ElementContainerType {
   }
 
   @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "stack",
+      "alignment": alignment.toString(),
+      "fit": fit.toString(),
+    };
+  }
+
+  @override
   String get label => "Stack";
+
+  @override
+  UpdateAction? setValue(String property, String value, ElementRoot root) {
+    switch (property) {
+      case "alignment":
+        var old = alignment;
+        alignment = AlignmentExtension.fromString(value,
+            defaultValue: Alignment.center);
+        return UpdateAction<AlignmentGeometry>(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+      case "fit":
+        var old = fit;
+        fit = StackFit.values.firstWhere((e) => e.toString() == value,
+            orElse: () => StackFit.loose);
+        return UpdateAction<StackFit>(
+          oldValue: old,
+          newValue: fit,
+          set: (v) => fit = v,
+        );
+    }
+    return null;
+  }
+
+  @override
+  UpdateAction? handleAction(String action, Map<String, String> args) => null;
 }
 
 //WrapElement
@@ -429,7 +802,98 @@ class WrapElementType extends ElementContainerType {
   }
 
   @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "wrap",
+      "direction": direction.toString(),
+      "alignment": alignment.toString(),
+      "spacing": spacing.toString(),
+      "crossAxisAlignment": crossAxisAlignment.toString(),
+      "textDirection": textDirection.toString(),
+      "verticalDirection": verticalDirection.toString(),
+      "clipBehavior": clipBehavior.toString(),
+    };
+  }
+
+  @override
   String get label => "Wrap";
+
+  @override
+  UpdateAction? setValue(String property, String value, ElementRoot root) {
+    switch (property) {
+      case "direction":
+        var old = direction;
+        direction = value == "horizontal" ? Axis.horizontal : Axis.vertical;
+        return UpdateAction<Axis>(
+          oldValue: old,
+          newValue: direction,
+          set: (v) => direction = v,
+        );
+      case "alignment":
+        var old = alignment;
+        alignment = WrapAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => WrapAlignment.start);
+        return UpdateAction<WrapAlignment>(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+      case "spacing":
+        var old = spacing;
+        spacing = double.tryParse(value) ?? 0;
+        return UpdateAction<double>(
+          oldValue: old,
+          newValue: spacing,
+          set: (v) => spacing = v,
+        );
+      case "crossAxisAlignment":
+        var old = crossAxisAlignment;
+        crossAxisAlignment = WrapCrossAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => WrapCrossAlignment.start);
+        return UpdateAction<WrapCrossAlignment>(
+          oldValue: old,
+          newValue: crossAxisAlignment,
+          set: (v) => crossAxisAlignment = v,
+        );
+      case "textDirection":
+        var old = textDirection;
+        textDirection = TextDirection.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => TextDirection.ltr);
+        return UpdateAction<TextDirection>(
+          oldValue: old,
+          newValue: textDirection,
+          set: (v) => textDirection = v,
+        );
+      case "verticalDirection":
+        var old = verticalDirection;
+        verticalDirection = VerticalDirection.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => VerticalDirection.down);
+        return UpdateAction<VerticalDirection>(
+          oldValue: old,
+          newValue: verticalDirection,
+          set: (v) => verticalDirection = v,
+        );
+      case "clipBehavior":
+        var old = clipBehavior;
+        clipBehavior = Clip.values
+            .firstWhere((e) => e.toString() == value, orElse: () => Clip.none);
+        return UpdateAction<Clip>(
+          oldValue: old,
+          newValue: clipBehavior,
+          set: (v) => clipBehavior = v,
+        );
+    }
+    return null;
+  }
+
+  @override
+  UpdateAction? handleAction(String action, Map<String, String> args) {
+    return null;
+  }
 }
 
 @notifier
@@ -489,7 +953,102 @@ class ScrollableGridElementType extends ElementContainerType {
   }
 
   @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "scrollableGrid",
+      "crossAxisCount": crossAxisCount,
+      "crossAxisSpacing": crossAxisSpacing,
+      "mainAxisSpacing": mainAxisSpacing,
+      "childAspectRatio": childAspectRatio,
+      "mainAxisAlignment": mainAxisAlignment.toString(),
+      "crossAxisAlignment": crossAxisAlignment.toString(),
+      "direction": direction.toString(),
+      "canScroll": canScroll,
+    };
+  }
+
+  @override
   String get label => "Grid";
+
+  @override
+  UpdateAction? setValue(String property, String value, ElementRoot root) {
+    switch (property) {
+      case "crossAxisCount":
+        var old = crossAxisCount;
+        crossAxisCount = int.tryParse(value) ?? crossAxisCount;
+        return UpdateAction<int>(
+          oldValue: old,
+          newValue: crossAxisCount,
+          set: (v) => crossAxisCount = v,
+        );
+      case "crossAxisSpacing":
+        var old = crossAxisSpacing;
+        crossAxisSpacing = double.tryParse(value) ?? crossAxisSpacing;
+        return UpdateAction<double>(
+          oldValue: old,
+          newValue: crossAxisSpacing,
+          set: (v) => crossAxisSpacing = v,
+        );
+      case "mainAxisSpacing":
+        var old = mainAxisSpacing;
+        mainAxisSpacing = double.tryParse(value) ?? mainAxisSpacing;
+        return UpdateAction<double>(
+          oldValue: old,
+          newValue: mainAxisSpacing,
+          set: (v) => mainAxisSpacing = v,
+        );
+      case "childAspectRatio":
+        var old = childAspectRatio;
+        childAspectRatio = double.tryParse(value) ?? childAspectRatio;
+        return UpdateAction<double>(
+          oldValue: old,
+          newValue: childAspectRatio,
+          set: (v) => childAspectRatio = v,
+        );
+      case "mainAxisAlignment":
+        var old = mainAxisAlignment;
+        mainAxisAlignment = MainAxisAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => MainAxisAlignment.start);
+        return UpdateAction<MainAxisAlignment>(
+          oldValue: old,
+          newValue: mainAxisAlignment,
+          set: (v) => mainAxisAlignment = v,
+        );
+      case "crossAxisAlignment":
+        var old = crossAxisAlignment;
+        crossAxisAlignment = CrossAxisAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => CrossAxisAlignment.start);
+        return UpdateAction<CrossAxisAlignment>(
+          oldValue: old,
+          newValue: crossAxisAlignment,
+          set: (v) => crossAxisAlignment = v,
+        );
+      case "direction":
+        var old = direction;
+        direction = value == "vertical" ? Axis.vertical : Axis.horizontal;
+        return UpdateAction<Axis>(
+          oldValue: old,
+          newValue: direction,
+          set: (v) => direction = v,
+        );
+      case "canScroll":
+        var old = canScroll;
+        canScroll = value.toLowerCase() == "true";
+        return UpdateAction<bool>(
+          oldValue: old,
+          newValue: canScroll,
+          set: (v) => canScroll = v,
+        );
+    }
+    return null;
+  }
+
+  @override
+  UpdateAction? handleAction(String action, Map<String, String> args) {
+    return null;
+  }
 }
 
 @notifier
@@ -500,6 +1059,14 @@ class ScalingGridElementType extends ElementContainerType {
   double _spacing = 0;
   @notify
   WrapCrossAlignment _crossAxisAlignment = WrapCrossAlignment.start;
+
+  ScalingGridElementType({
+    WrapAlignment alignment = WrapAlignment.start,
+    double spacing = 0,
+    WrapCrossAlignment crossAxisAlignment = WrapCrossAlignment.start,
+  })  : _alignment = alignment,
+        _spacing = spacing,
+        _crossAxisAlignment = crossAxisAlignment;
 
   @override
   Widget getWidget(List<Widget> children) {
@@ -536,6 +1103,74 @@ class ScalingGridElementType extends ElementContainerType {
       crossAxisAlignment = other.crossAxisAlignment;
     }
   }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "scalingGrid",
+      "alignment": alignment.toString(),
+      "spacing": spacing.toString(),
+      "crossAxisAlignment": crossAxisAlignment.toString(),
+    };
+  }
+
+  ScalingGridElementType.fromJson(Map<String, dynamic> json) {
+    String? alignmentString = json["alignment"];
+    for (WrapAlignment value in WrapAlignment.values) {
+      if (value.toString() == alignmentString) {
+        alignment = value;
+        break;
+      }
+    }
+
+    String? crossAxisString = json["crossAxisAlignment"];
+    for (WrapCrossAlignment value in WrapCrossAlignment.values) {
+      if (value.toString() == crossAxisString) {
+        crossAxisAlignment = value;
+        break;
+      }
+    }
+
+    spacing = double.tryParse(json["spacing"]) ?? 0;
+  }
+
+  @override
+  UpdateAction? setValue(String property, String value, ElementRoot root) {
+    switch (property) {
+      case "alignment":
+        var old = alignment;
+        alignment = WrapAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => WrapAlignment.start);
+        return UpdateAction<WrapAlignment>(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+      case "spacing":
+        var old = spacing;
+        spacing = double.tryParse(value) ?? 0;
+        return UpdateAction<double>(
+          oldValue: old,
+          newValue: spacing,
+          set: (v) => spacing = v,
+        );
+      case "crossAxisAlignment":
+        var old = crossAxisAlignment;
+        crossAxisAlignment = WrapCrossAlignment.values.firstWhere(
+            (e) => e.toString() == value,
+            orElse: () => WrapCrossAlignment.start);
+        return UpdateAction<WrapCrossAlignment>(
+          oldValue: old,
+          newValue: crossAxisAlignment,
+          set: (v) => crossAxisAlignment = v,
+        );
+    }
+    return null;
+  }
+
+  @override
+  UpdateAction? handleAction(String action, Map<String, String> args) => null;
 
   @override
   String get label => "Scaling Grid";

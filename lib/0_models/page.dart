@@ -4,8 +4,10 @@ import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
+import 'package:jouhakka_forge/1_helpers/element_helper.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
+import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:jouhakka_forge/3_components/element/ui_element_component.dart';
 
 part 'page.g.dart';
@@ -81,6 +83,44 @@ abstract class ElementRoot extends ChangeNotifier {
     if (body != null) {
       _body = body;
     }
+  }
+
+  UIElement elementFrom(List<int> path, {bool createIfNotPresent = false}) {
+    UIElement element = body;
+    if (path.isEmpty) return element;
+    for (int i = 0; i < path.length; i++) {
+      if (element is BranchElement) {
+        if (element.content.value == null) {
+          if (createIfNotPresent) {
+            element.addChildFromType(UIElementType.empty, null);
+            debugPrint("Adding empty child to $element at $path.");
+          } else {
+            throw Exception(
+                "BranchElement at path $path at [${i - 1}] has no content.");
+          }
+        }
+        int childIndex = path[i];
+        if (childIndex < 0 ||
+            childIndex >= element.content.value!.children.length) {
+          if (createIfNotPresent) {
+            int missingChildCount =
+                childIndex - element.content.value!.children.length - 1;
+            debugPrint(
+                "Adding $missingChildCount empty children to $element at $path.");
+            for (int j = 0; j < missingChildCount; j++) {
+              element.addChildFromType(UIElementType.empty, null);
+            }
+          } else {
+            throw Exception(
+                "BranchElement at path $path at [${i - 1}] has no child at index $childIndex.");
+          }
+        }
+        element = element.content.value!.children[path[i]];
+      } else {
+        throw Exception("Collided with non-branch element");
+      }
+    }
+    return element;
   }
 
   static T empty<T extends ElementRoot>(

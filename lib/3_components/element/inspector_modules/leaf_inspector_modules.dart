@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
+import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/3_components/buttons/my_icon_button.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/a_inspector_modules.dart';
 import 'package:jouhakka_forge/3_components/layout/gap.dart';
@@ -10,7 +11,7 @@ import 'package:jouhakka_forge/5_style/icons/lucide_map.dart';
 extension TextElementEditor on TextElement {
   Widget getEditor() {
     final TextEditingController textController =
-        TextEditingController(text: text);
+        TextEditingController(text: text.value);
     final TextEditingController fontSizeController =
         TextEditingController(text: fontSize.toString());
 
@@ -21,16 +22,27 @@ extension TextElementEditor on TextElement {
           children: [
             MyTextField(
               controller: textController,
-              onChanged: (value) {
-                text = value;
-                return true;
+              onSubmitted: (value) {
+                try {
+                  text = VariableParser.parse<String>(value, root,
+                      notifyListeners: notifyListeners);
+                  return true;
+                } catch (e) {
+                  return false;
+                }
               },
             ),
             Gap.h8,
-            MyNumberField<double>(
+            MyTextField(
               controller: fontSizeController,
-              onChanged: (value) {
-                fontSize = value;
+              onSubmitted: (value) {
+                try {
+                  fontSize = VariableParser.parse<double>(value, root,
+                      notifyListeners: notifyListeners);
+                  return true;
+                } catch (e) {
+                  return false;
+                }
               },
             ),
             alignment.getEditor((alignment) {

@@ -19,3 +19,11 @@ builders:
     auto_apply: dependents # Apply to dependent packages
     build_to: cache # Output to the build cache
     applies_builders: ["source_gen|combining_builder"] # Apply the combining builder
+  design_model_builder:
+    target: ":jouhakka_forge" # Target this project
+    import: "package:jouhakka_forge/1_helpers/build/builder.dart" # Path to your builder
+    builder_factories: ["designModelBuilder"] # Factory function name
+    build_extensions: { ".dart": ["design_model.g.part"] } # Output file extension
+    auto_apply: dependents # Apply to dependent packages
+    build_to: cache # Output to the build cache
+    applies_builders: ["source_gen|combining_builder"] # Apply the combining builder

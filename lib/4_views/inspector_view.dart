@@ -1,16 +1,22 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/2_services/actions.dart';
+import 'package:jouhakka_forge/2_services/ai_service.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/a_inspector_modules.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/branch_inspector_modules.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/leaf_inspector_modules.dart';
 import 'package:jouhakka_forge/3_components/layout/context_menu.dart';
+import 'package:jouhakka_forge/3_components/layout/gap.dart';
 import 'package:jouhakka_forge/3_components/layout/inspector_boxes.dart';
 import 'package:jouhakka_forge/3_components/layout/inspector_title.dart';
 import 'package:jouhakka_forge/3_components/state_management/change_listener.dart';
 import 'package:jouhakka_forge/3_components/state_management/value_listener.dart';
+import 'package:jouhakka_forge/3_components/text_field.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
 
 class InspectorView extends StatelessWidget {
@@ -98,6 +104,26 @@ class InspectorView extends StatelessWidget {
   }
 
   Widget _rootInspector(BuildContext context) {
+    void generateDesign(String promt) async {
+      try {
+        String extendedPromt = await AIService.extendPromt(promt);
+        /*String response = await AIService.getFinalFormat(extendedPromt);
+        Map<String, dynamic> json = jsonDecode(response);
+        ActionService.listFromMap(json);
+        Map<String, dynamic> design = root.body.toJson();
+        String response2 =
+            await AIService.editDesing(design.toString(), extendedPromt);
+        Map<String, dynamic> json2 = jsonDecode(response2);
+        root.body = BranchElement.fromJson(json2, root, null);*/
+        final response = await AIService.initialActions(
+          extendedPromt,
+        );
+        ActionService.actionsFromList(response);
+      } catch (e, s) {
+        debugPrint("Failed to parse JSON: $e | $s");
+      }
+    }
+
     return _inspectorBuilder(
       context,
       root.title,
@@ -117,6 +143,34 @@ class InspectorView extends StatelessWidget {
       children: [
         root.variables.getEditor(root),
         Session.currentProject.value!.variables.getEditor(null),
+        MyTextField(
+          controller: TextEditingController(),
+          onSubmitted: (value) {
+            if (value.isNotEmpty) {
+              generateDesign(value);
+            }
+            return true;
+          },
+        ),
+        Gap.h12,
+        MyTextField(
+          controller: TextEditingController(),
+          onSubmitted: (value) {
+            if (value.isNotEmpty) {
+              try {
+                List<Map<String, dynamic>> json =
+                    (jsonDecode(value) as List).cast<Map<String, dynamic>>();
+                debugPrint("Parsed list with ${json.length} actions");
+                return ActionService.actionsFromList(json);
+                //root.body = BranchElement.fromJson(json, root, null);
+              } catch (e, s) {
+                debugPrint("Failed to parse user JSON: $e | $s");
+                return false;
+              }
+            }
+            return true;
+          },
+        ),
       ],
     );
   }

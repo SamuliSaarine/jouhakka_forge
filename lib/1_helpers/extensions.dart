@@ -57,6 +57,107 @@ extension AlignmentExtension on Alignment {
     }
     throw UnimplementedError('Ratio for $this is not implemented');
   }
+
+  String toJson() {
+    switch (this) {
+      case Alignment.topLeft:
+        return 'topLeft';
+      case Alignment.topCenter:
+        return 'topCenter';
+      case Alignment.topRight:
+        return 'topRight';
+      case Alignment.centerLeft:
+        return 'centerLeft';
+      case Alignment.center:
+        return 'center';
+      case Alignment.centerRight:
+        return 'centerRight';
+      case Alignment.bottomLeft:
+        return 'bottomLeft';
+      case Alignment.bottomCenter:
+        return 'bottomCenter';
+      case Alignment.bottomRight:
+        return 'bottomRight';
+    }
+    throw UnimplementedError('Alignment for $this is not implemented');
+  }
+
+  static Alignment fromString(String? value, {Alignment? defaultValue}) {
+    switch (value) {
+      case 'topLeft':
+        return Alignment.topLeft;
+      case 'topCenter':
+        return Alignment.topCenter;
+      case 'topRight':
+        return Alignment.topRight;
+      case 'centerLeft':
+        return Alignment.centerLeft;
+      case 'center':
+        return Alignment.center;
+      case 'centerRight':
+        return Alignment.centerRight;
+      case 'bottomLeft':
+        return Alignment.bottomLeft;
+      case 'bottomCenter':
+        return Alignment.bottomCenter;
+      case 'bottomRight':
+        return Alignment.bottomRight;
+      case null:
+        if (defaultValue != null) return defaultValue;
+    }
+    throw UnimplementedError('Alignment for $value is not implemented');
+  }
+}
+
+extension FontWeightExtension on FontWeight {
+  static FontWeight fromString(String value) {
+    switch (value) {
+      case 'thin':
+        return FontWeight.w100;
+      case 'extraLight':
+        return FontWeight.w200;
+      case 'light':
+        return FontWeight.w300;
+      case 'regular':
+      case 'normal':
+        return FontWeight.w400;
+      case 'medium':
+        return FontWeight.w500;
+      case 'semiBold':
+        return FontWeight.w600;
+      case 'bold':
+        return FontWeight.w700;
+      case 'extraBold':
+        return FontWeight.w800;
+      case 'black':
+        return FontWeight.w900;
+    }
+    throw UnimplementedError('FontWeight for $value is not implemented');
+  }
+
+  String toJson() {
+    switch (this) {
+      case FontWeight.w100:
+        return 'thin';
+      case FontWeight.w200:
+        return 'extraLight';
+      case FontWeight.w300:
+        return 'light';
+      case FontWeight.w400:
+        return 'normal';
+      case FontWeight.w500:
+        return 'medium';
+      case FontWeight.w600:
+        return 'semiBold';
+      case FontWeight.w700:
+        return 'bold';
+      case FontWeight.w800:
+        return 'extraBold';
+      case FontWeight.w900:
+        return 'black';
+    }
+    throw UnimplementedError('FontWeight for $this is not implemented');
+  }
 }
 
 extension ColorExtension on Color {

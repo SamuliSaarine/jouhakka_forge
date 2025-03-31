@@ -4,47 +4,74 @@ import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
+import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/extensions.dart';
+import 'package:jouhakka_forge/2_services/actions.dart';
+import 'package:jouhakka_forge/5_style/icons/lucide_map.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 
 part 'media_elements.g.dart';
 
-class LeafElement extends UIElement {
+abstract class LeafElement extends UIElement {
   LeafElement({
     required super.root,
     super.parent,
   });
 
   @override
-  LeafElement clone({ElementRoot? root, ElementContainer? parent}) {
-    return LeafElement(root: root ?? this.root, parent: parent ?? this.parent);
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'leaf',
+      ...super.toJson(),
+    };
+  }
+
+  LeafElement.fromJson(super.json, super.root, super.parent) : super.fromJson();
+
+  static LeafElement? tryFromJson(
+      Map<String, dynamic> json, ElementRoot root, ElementContainer? parent) {
+    try {
+      switch (json["leaf"]["type"]) {
+        case "text":
+          return TextElement.fromJson(json, root, parent);
+        case "image":
+          return ImageElement.fromJson(json, root, parent);
+        case "icon":
+          return IconElement.fromJson(json, root, parent);
+        default:
+          throw Exception("Unknown leaf type: ${json["leaf"]["type"]}");
+      }
+    } catch (e) {
+      debugPrint("Error deserializing leaf element: $e");
+      return null;
+    }
   }
 }
 
 @notifier
 class TextElement extends LeafElement {
   @notify
-  String _text;
+  Variable<String> _text = ConstantVariable("");
   @notify
-  Color _color = Colors.black;
+  Variable<Color> _color = ConstantVariable(Colors.black);
   @notify
-  double _fontSize = 18;
+  Variable<double> _fontSize = ConstantVariable(18);
   @notify
   FontWeight _fontWeight = FontWeight.normal;
   @notify
   Alignment _alignment = Alignment.center;
 
   /// [TextElement] is a [UIElement] that displays text.
-  TextElement({
-    String text = "Placeholder",
+  TextElement(
+    Variable<String> text, {
     required super.root,
     super.parent,
   }) : _text = text;
 
-  factory TextElement.from(UIElement element, {String text = "Placeholder"}) =>
+  factory TextElement.from(UIElement element, Variable<String> text) =>
       TextElement(
-        text: text,
+        text,
         root: element.root,
         parent: element.parent,
       )..copy(element);
@@ -54,11 +81,11 @@ class TextElement extends LeafElement {
     return Align(
       alignment: alignment,
       child: Text(
-        text,
+        text.value,
         textAlign: alignment.getTextAlignment(),
         style: TextStyle(
-          color: color,
-          fontSize: fontSize,
+          color: color.value,
+          fontSize: fontSize.value,
           fontWeight: fontWeight,
         ),
       ),
@@ -79,10 +106,159 @@ class TextElement extends LeafElement {
   @override
   LeafElement clone({ElementRoot? root, ElementContainer? parent}) =>
       TextElement(
-        text: text,
+        text,
         root: root ?? this.root,
         parent: parent ?? this.parent,
       )..copy(this);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      ...super.toJson(),
+      "leaf": {
+        "type": "text",
+        "text": text.toString(),
+        "color": color.toString(),
+        "fontSize": fontSize.toString(),
+        "fontWeight": fontWeight.toJson(),
+        "alignment": alignment.toJson(),
+      }
+    };
+  }
+
+  TextElement.fromJson(
+      Map<String, dynamic> json, ElementRoot root, ElementContainer? parent)
+      : super.fromJson(json, root, parent) {
+    Map<String, dynamic> leaf = json['leaf'];
+    _text = VariableParser.parse<String>(leaf['text'], root,
+        notifyListeners: notifyListeners);
+    color = VariableParser.parse<Color>(leaf['color'], root,
+        notifyListeners: notifyListeners);
+    fontSize = VariableParser.parse<double>(leaf['fontSize'], root,
+        notifyListeners: notifyListeners);
+    fontWeight = FontWeightExtension.fromString(leaf['fontWeight']);
+    alignment = AlignmentExtension.fromString(leaf['alignment']);
+  }
+
+  @override
+  UpdateAction? setValue(String property, String value) {
+    switch (property) {
+      case "text":
+        var newValue = VariableParser.parse<String>(value, root,
+            notifyListeners: notifyListeners);
+        if (text == newValue) return null;
+        var old = text;
+        text = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: text,
+          set: (v) => text = v,
+        );
+      case "color":
+        var newValue = VariableParser.parse<Color>(value, root,
+            notifyListeners: notifyListeners);
+        if (color == newValue) return null;
+        var old = color;
+        color = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: color,
+          set: (v) => color = v,
+        );
+      case "fontSize":
+        var newValue = VariableParser.parse<double>(value, root,
+            notifyListeners: notifyListeners);
+        if (fontSize == newValue) return null;
+        var old = fontSize;
+        fontSize = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: fontSize,
+          set: (v) => fontSize = v,
+        );
+      case "fontWeight":
+        var newValue = FontWeightExtension.fromString(value);
+        if (fontWeight == newValue) return null;
+        var old = fontWeight;
+        fontWeight = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: fontWeight,
+          set: (v) => fontWeight = v,
+        );
+      case "alignment":
+        var newValue = AlignmentExtension.fromString(value);
+        if (alignment == newValue) return null;
+        var old = alignment;
+        alignment = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+    }
+    return super.setValue(property, value);
+  }
+
+  @override
+  MyAction? handleAction(String action, Map<String, String> args) {
+    switch (action) {
+      case "setText":
+        var newValue = VariableParser.parse<String>(args["text"]!, root,
+            notifyListeners: notifyListeners);
+        if (text == newValue) return null;
+        var old = text;
+        text = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: text,
+          set: (v) => text = v,
+        );
+      case "setColor":
+        var newValue = VariableParser.parse<Color>(args["color"]!, root,
+            notifyListeners: notifyListeners);
+        if (color == newValue) return null;
+        var old = color;
+        color = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: color,
+          set: (v) => color = v,
+        );
+      case "setFontSize":
+        var newValue = VariableParser.parse<double>(args["fontSize"]!, root,
+            notifyListeners: notifyListeners);
+        if (fontSize == newValue) return null;
+        var old = fontSize;
+        fontSize = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: fontSize,
+          set: (v) => fontSize = v,
+        );
+      case "setFontWeight":
+        var newValue = FontWeightExtension.fromString(args["fontWeight"]!);
+        if (fontWeight == newValue) return null;
+        var old = fontWeight;
+        fontWeight = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: fontWeight,
+          set: (v) => fontWeight = v,
+        );
+      case "setAlignment":
+        var newValue = AlignmentExtension.fromString(args["alignment"]!);
+        if (alignment == newValue) return null;
+        var old = alignment;
+        alignment = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+    }
+    return super.handleAction(action, args);
+  }
 
   @override
   String get label => "Text";
@@ -131,6 +307,11 @@ class ImageElement extends LeafElement {
           : NetworkImage(imagePath),
       fit: fit,
       alignment: alignment,
+      errorBuilder: (context, error, stackTrace) => Image(
+        image: AssetImage("images/placeholder.png"),
+        fit: fit,
+        alignment: alignment,
+      ),
     );
   }
 
@@ -154,6 +335,125 @@ class ImageElement extends LeafElement {
       )..copy(this);
 
   @override
+  Map<String, dynamic> toJson() {
+    return {
+      ...super.toJson(),
+      "leaf": {
+        "type": "image",
+        "imagePath": imagePath,
+        "source": source.toString(),
+        "fit": fit.toString(),
+        "alignment": alignment.toString(),
+      }
+    };
+  }
+
+  ImageElement.fromJson(
+      Map<String, dynamic> json, ElementRoot root, ElementContainer? parent)
+      : _imagePath = json['leaf']['imagePath'],
+        super.fromJson(json, root, parent) {
+    Map<String, dynamic> leaf = json['leaf'];
+    final sourceString = leaf['source'];
+    for (ImageSource source in ImageSource.values) {
+      if (source.toString() == sourceString) {
+        this.source = source;
+        break;
+      }
+    }
+    final fitString = leaf['fit'];
+    for (BoxFit fit in BoxFit.values) {
+      if (fit.toString() == fitString) {
+        this.fit = fit;
+        break;
+      }
+    }
+    alignment = AlignmentExtension.fromString(leaf['alignment']);
+  }
+
+  @override
+  UpdateAction? setValue(String property, String value) {
+    switch (property) {
+      case "imagePath":
+        var old = imagePath;
+        imagePath = value;
+        return UpdateAction(
+          oldValue: old,
+          newValue: imagePath,
+          set: (v) => imagePath = v,
+        );
+      case "source":
+        var old = source;
+        source = ImageSource.values.firstWhere((e) => e.toString() == value,
+            orElse: () => ImageSource.asset);
+        return UpdateAction(
+          oldValue: old,
+          newValue: source,
+          set: (v) => source = v,
+        );
+      case "fit":
+        var old = fit;
+        fit = BoxFit.values.firstWhere((e) => e.toString() == value,
+            orElse: () => BoxFit.cover);
+        return UpdateAction(
+          oldValue: old,
+          newValue: fit,
+          set: (v) => fit = v,
+        );
+      case "alignment":
+        var old = alignment;
+        alignment = AlignmentExtension.fromString(value);
+        return UpdateAction(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+    }
+    return super.setValue(property, value);
+  }
+
+  @override
+  MyAction? handleAction(String action, Map<String, String> args) {
+    switch (action) {
+      case "setImagePath":
+        String old = imagePath;
+        imagePath = args["path"]!;
+        return UpdateAction(
+          oldValue: old,
+          newValue: imagePath,
+          set: (v) => imagePath = v,
+        );
+      case "setSource":
+        ImageSource old = source;
+        source = ImageSource.values.firstWhere(
+            (e) => e.toString() == args["source"],
+            orElse: () => ImageSource.asset);
+        return UpdateAction(
+          oldValue: old,
+          newValue: source,
+          set: (v) => source = v,
+        );
+      case "setFit":
+        BoxFit old = fit;
+        fit = BoxFit.values.firstWhere((e) => e.toString() == args["fit"],
+            orElse: () => BoxFit.cover);
+        return UpdateAction(
+          oldValue: old,
+          newValue: fit,
+          set: (v) => fit = v,
+        );
+      case "setAlignment":
+        Alignment old = alignment;
+        alignment = AlignmentExtension.fromString(args["alignment"]!);
+        return UpdateAction(
+          oldValue: old,
+          newValue: alignment,
+          set: (v) => alignment = v,
+        );
+    }
+    return super.handleAction(action, args);
+  }
+
+  @override
   String get label => "Image";
 }
 
@@ -163,7 +463,7 @@ class IconElement extends LeafElement {
   IconData _icon;
 
   @notify
-  Color _color = Colors.black;
+  Variable<Color> _color = ConstantVariable(Colors.black);
 
   /// [IconElement] is a [UIElement] that displays an icon.
   IconElement({
@@ -185,7 +485,7 @@ class IconElement extends LeafElement {
     return Icon(
       icon,
       size: min(size.width.renderValue ?? 24, size.height.renderValue ?? 24),
-      color: color,
+      color: color.value,
     );
   }
 
@@ -208,4 +508,82 @@ class IconElement extends LeafElement {
 
   @override
   String get label => "Icon";
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      ...super.toJson(),
+      "leaf": {
+        "type": "icon",
+        "icon": icon.codePoint,
+        "color": color.toString(),
+      }
+    };
+  }
+
+  IconElement.fromJson(
+      Map<String, dynamic> json, ElementRoot root, ElementContainer? parent)
+      : _icon = IconData(int.parse(json['leaf']['icon']),
+            fontFamily: 'LucideIcons'),
+        super.fromJson(json, root, parent) {
+    Map<String, dynamic> leaf = json['leaf'];
+    _color = VariableParser.parse<Color>(leaf['color'], root,
+        notifyListeners: notifyListeners);
+  }
+
+  @override
+  UpdateAction? setValue(String property, String value) {
+    switch (property) {
+      case "icon":
+        int? codePoint = findCodePoint(value);
+        if (codePoint == null || icon.codePoint == codePoint) return null;
+        var old = icon;
+        icon = IconData(codePoint, fontFamily: 'LucideIcons');
+        return UpdateAction(
+          oldValue: old,
+          newValue: icon,
+          set: (v) => icon = v,
+        );
+      case "color":
+        var newValue = VariableParser.parse<Color>(value, root,
+            notifyListeners: notifyListeners);
+        if (color == newValue) return null;
+        var old = color;
+        color = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: color,
+          set: (v) => color = v,
+        );
+    }
+    return super.setValue(property, value);
+  }
+
+  @override
+  MyAction? handleAction(String action, Map<String, String> args) {
+    switch (action) {
+      case "setIcon":
+        int? codePoint = findCodePoint(args['icon']!);
+        if (codePoint == null || icon.codePoint == codePoint) return null;
+        var old = icon;
+        icon = IconData(codePoint, fontFamily: 'LucideIcons');
+        return UpdateAction(
+          oldValue: old,
+          newValue: icon,
+          set: (v) => icon = v,
+        );
+      case "setColor":
+        var newValue = VariableParser.parse<Color>(args["color"]!, root,
+            notifyListeners: notifyListeners);
+        if (color == newValue) return null;
+        var old = color;
+        color = newValue;
+        return UpdateAction(
+          oldValue: old,
+          newValue: color,
+          set: (v) => color = v,
+        );
+    }
+    return super.handleAction(action, args);
+  }
 }

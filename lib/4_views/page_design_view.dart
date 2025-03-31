@@ -223,31 +223,32 @@ class _PageDesignViewState extends State<PageDesignView> {
                                         color: Colors.black, fontSize: 12)),
                                 if (isPressed)
                                   ValueListener(
-                                      source: Session.addDirection,
-                                      builder: (addDirection) {
-                                        final IconData icon;
-                                        switch (addDirection) {
-                                          case AddDirection.top:
-                                            icon = LucideIcons.arrowUp;
-                                            break;
-                                          case AddDirection.bottom:
-                                            icon = LucideIcons.arrowDown;
-                                            break;
-                                          case AddDirection.left:
-                                            icon = LucideIcons.arrowLeft;
-                                            break;
-                                          case AddDirection.right:
-                                            icon = LucideIcons.arrowRight;
-                                            break;
-                                          default:
-                                            icon = LucideIcons.dot;
-                                        }
-                                        return Icon(
-                                          icon,
-                                          color: Colors.black,
-                                          size: 16,
-                                        );
-                                      })
+                                    source: Session.addDirection,
+                                    builder: (addDirection) {
+                                      final IconData icon;
+                                      switch (addDirection) {
+                                        case AddDirection.top:
+                                          icon = LucideIcons.arrowUp;
+                                          break;
+                                        case AddDirection.bottom:
+                                          icon = LucideIcons.arrowDown;
+                                          break;
+                                        case AddDirection.left:
+                                          icon = LucideIcons.arrowLeft;
+                                          break;
+                                        case AddDirection.right:
+                                          icon = LucideIcons.arrowRight;
+                                          break;
+                                        default:
+                                          icon = LucideIcons.dot;
+                                      }
+                                      return Icon(
+                                        icon,
+                                        color: Colors.black,
+                                        size: 16,
+                                      );
+                                    },
+                                  )
                               ],
                             );
                           },

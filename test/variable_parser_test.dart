@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/project.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';

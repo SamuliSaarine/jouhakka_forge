@@ -1,0 +1,69 @@
+# Questions for Context Gathering
+
+## 1. Product Goals
+- What is the primary purpose of the project or product?
+    The goal of the product is to create a platform similar to Lovable.dev but tailored for designers. It aims to combine Figma-level control and professional design workflows with the AI-powered capabilities of Lovable.dev.
+- Who is the target audience or end-user of the product?
+    The target audience is designers who want to create responsive designs for apps and websites.
+- Are there specific features or functionalities that are critical to the product's success?
+    - AI-generated UI design and a UI editing interface with an efficiency-first approach, utilizing muscle memory.
+
+## 2. Technical Requirements
+- What programming language(s) and frameworks are being used?
+    - Flutter and Dart are being used as the primary front-end programming language and framework.
+- Are there any specific libraries, tools, or APIs that should be integrated?
+    - OpenAI API for AI-powered capabilities.
+- What is the target environment (e.g., web, mobile, desktop, cloud)?
+    - Web app
+
+## 3. Code Style and Standards
+- Are there any coding standards or style guides that should be followed?
+    - Follow the Dart style guide: https://dart.dev/guides/language/effective-dart
+    - Use consistent indentation (2 spaces) and meaningful variable names.
+    - Write modular, reusable, and testable code.
+    - Avoid long methods; break them into smaller, focused functions.
+    - Use comments to explain complex logic or non-obvious decisions.
+- Should the code prioritize readability, performance, or both?
+    - Prioritize scalability and safety over performance and readability.
+
+## 4. Scalability and Performance
+- Is the project expected to handle large-scale data or high traffic?
+    - No, the project is not expected to handle large-scale data or high traffic at this stage. The focus is on building a functional prototype for designers.
+- Are there any performance benchmarks or constraints to consider?
+    - Ensure the UI rendering logic is optimized for modularity and reusability.
+    - Use lazy loading techniques to improve performance for deeply nested data.
+    - Implement responsive design principles using Flutter's `LayoutBuilder` and `MediaQuery` to adapt to different screen sizes.
+    - Utilize efficient state management solutions like `Provider` or `Riverpod` to handle dynamic data updates.
+    - Test the UI with sample nested data to identify and address performance bottlenecks.
+- Should the code be optimized for memory usage, speed, or both?
+    - Optimize for both memory usage and speed, but prioritize speed in scenarios where trade-offs are necessary.
+
+## 5. Security and Compliance
+- Are there any security requirements or best practices to follow?
+- Should the code comply with specific regulations or standards (e.g., GDPR, HIPAA)?
+- Are there any known vulnerabilities or risks to avoid?
+
+## 6. Testing and Validation
+- Should unit tests, integration tests, or end-to-end tests be included?
+- Are there specific testing frameworks or tools to use?
+- How should edge cases and error handling be addressed?
+
+## 7. Documentation and Collaboration
+- Should the code include inline comments or external documentation?
+- Are there any templates or formats for documentation?
+- Is the project being developed collaboratively, and are there team-specific practices to follow?
+
+## 8. User Feedback and Iteration
+- How will feedback be provided for the generated code?
+- Are there any specific preferences or past examples to learn from?
+- Should the code be designed for easy iteration and updates?
+
+## 9. Timeline and Priorities
+- Are there any deadlines or milestones to meet?
+- What are the highest-priority features or tasks?
+- Should the focus be on delivering a quick prototype or a production-ready solution?
+
+## 10. Additional Context
+- Are there any existing codebases or projects to reference?
+- Are there any known challenges or limitations in the project?
+- Is there anything else I should know to better align with your goals?

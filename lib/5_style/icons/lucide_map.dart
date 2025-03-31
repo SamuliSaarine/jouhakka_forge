@@ -1555,3 +1555,33 @@ const List<(String, int)> lucideMap = [
   ('zoom-in', 57781),
   ('zoom-out', 57782),
 ];
+
+//What is the first index in list of icon names that starts with a certain letter
+late final Map<String, int> _firstLetterIndexes;
+
+void initializeFirstLetterIndexes() {
+  _firstLetterIndexes = {
+    for (int i = 0; i < lucideMap.length; i++)
+      if (i == 0 || lucideMap[i].$1[0] != lucideMap[i - 1].$1[0])
+        lucideMap[i].$1[0]: i
+  };
+}
+
+int? findCodePoint(String name) {
+  assert(_firstLetterIndexes.isNotEmpty,
+      'First letter indexes not initialized. Call initializeFirstLetterIndexes() first.');
+  int? firstLetterIndex = _firstLetterIndexes[name[0]];
+  if (firstLetterIndex == null) {
+    return null;
+  }
+  for (int i = firstLetterIndex; i < lucideMap.length; i++) {
+    if (lucideMap[i].$1 == name) {
+      return lucideMap[i].$2;
+    }
+    if (lucideMap[i].$1.codeUnitAt(0) > name.codeUnitAt(0)) {
+      // Since the list is sorted, this means name is not in the list.
+      break;
+    }
+  }
+  return null;
+}

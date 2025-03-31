@@ -6,3 +6,8 @@ Builder notifierBuilder(BuilderOptions options) => SharedPartBuilder(
       [NotifierGenerator()],
       'notifier',
     );
+
+Builder designModelBuilder(BuilderOptions options) => SharedPartBuilder(
+      [DesignModelGenerator()],
+      'design_model',
+    );

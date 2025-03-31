@@ -1,12 +1,23 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
+import 'package:jouhakka_forge/0_models/utility_models.dart';
+import 'package:jouhakka_forge/0_models/variable_map.dart';
+import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
+import 'package:jouhakka_forge/1_helpers/element_helper.dart';
+import 'package:jouhakka_forge/2_services/actions.dart';
 import 'package:jouhakka_forge/2_services/idservice.dart';
+import 'package:jouhakka_forge/3_components/element/container_editor.dart';
 import 'package:jouhakka_forge/3_components/element/picker/element_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+@DesignModel(
+    description:
+        "Abstract base class that BranchElement and LeafElement inherit from.")
 abstract class UIElement extends ChangeNotifier {
   /// Every [UIElement] is part of an element tree, and every element tree has an [ElementRoot].
   ///
@@ -19,6 +30,7 @@ abstract class UIElement extends ChangeNotifier {
   /// If this [UIElement] is a child of another [UIElement], put the parent here.
   final ElementContainer? parent;
 
+  @DesignFieldHolder(fields: ['width', 'height'])
   final SizeHolder size = SizeHolder.expand();
 
   /// The width settings of this [UIElement].
@@ -40,6 +52,7 @@ abstract class UIElement extends ChangeNotifier {
     required this.parent,
   }) : id = IDService.newElementID(root.id) {
     size.addListener(notifyListeners);
+
     //width.addListener(notifyListeners);
     //height.addListener(notifyListeners);
   }
@@ -82,7 +95,8 @@ abstract class UIElement extends ChangeNotifier {
       case UIElementType.box:
         return BranchElement.defaultBox(root, parent: parent);
       case UIElementType.text:
-        return TextElement(root: root, parent: parent);
+        return TextElement(
+            root: root, parent: parent, ConstantVariable("My Text"));
       case UIElementType.image:
         return ImageElement(root: root, parent: parent);
       case UIElementType.icon:
@@ -90,14 +104,81 @@ abstract class UIElement extends ChangeNotifier {
     }
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "width": size.width.toJson(),
+      "height": size.height.toJson(),
+    };
+  }
+
+  UIElement.fromJson(Map<String, dynamic> json, this.root, this.parent)
+      : id = json["id"] ?? IDService.newElementID(root.id) {
+    size.widthFromJson(json["width"], root);
+    size.heightFromJson(json["height"], root);
+  }
+
+  static UIElement? tryFromJson(
+    Map<String, dynamic>? json,
+    ElementRoot root,
+    ElementContainer? parent, {
+    bool rethrowError = false,
+  }) {
+    if (json == null) return null;
+    try {
+      if (json["type"] == "branch") {
+        return BranchElement.fromJson(json, root, parent);
+      } else if (json["type"] == "leaf") {
+        return LeafElement.tryFromJson(json, root, parent);
+      }
+      return null;
+    } catch (e) {
+      if (rethrowError) rethrow;
+      return null;
+    }
+  }
+
   /// Returns the label of the [UIElement] that is shown in the [InspectorView].
   String get label => "Element";
+
+  UpdateAction? setValue(String property, String value) {
+    switch (property) {
+      case "width":
+        return UpdateAction<AxisSize>(
+            oldValue: size.width,
+            newValue: (size.widthFromJson(jsonDecode(value), root)),
+            set: (value) => size.width = value);
+      case "height":
+        return UpdateAction<AxisSize>(
+            oldValue: size.height,
+            newValue: (size.heightFromJson(jsonDecode(value), root)),
+            set: (value) => size.height = value);
+    }
+    return null;
+  }
+
+  MyAction? handleAction(String action, Map<String, String> args) {
+    if (parent != null) {
+      return size.handleAction(action, args, root);
+    }
+
+    return null;
+  }
 }
 
+@DesignModel(description: "UIElement that can have decoration and children.")
 class BranchElement extends UIElement {
   /// The decoration settings of this [UIElement].
+  @DesignField(
+    description: "Decoration settings for the element.",
+    defaultValue: "null",
+  )
   late final OptionalProperty<ElementDecoration> decoration;
 
+  @DesignField(
+    description: "Contains children and information how they are displayed.",
+    defaultValue: "null",
+  )
   late final OptionalProperty<ElementContainer> content;
 
   BranchElement({
@@ -141,11 +222,94 @@ class BranchElement extends UIElement {
   }
 
   @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "branch",
+      ...super.toJson(),
+      "decoration": decoration.value?.toJson(),
+      "content": content.value?.toJson(),
+    };
+  }
+
+  BranchElement.fromJson(
+      Map<String, dynamic> json, ElementRoot root, ElementContainer? parent)
+      : super.fromJson(json, root, parent) {
+    Map<String, dynamic>? decorationJson =
+        (json["decoration"] as Map?)?.cast<String, dynamic>();
+    decoration = OptionalProperty<ElementDecoration>(
+        ElementDecoration.tryFromJson(decorationJson, root),
+        listener: notifyListeners);
+    Map<String, dynamic>? contentJson =
+        (json["content"] as Map?)?.cast<String, dynamic>();
+    content = OptionalProperty<ElementContainer>(
+        ElementContainer.tryFromJson(contentJson, this),
+        listener: notifyListeners);
+  }
+
+  @override
   String get label => content.value?.label ?? super.label;
+
+  @override
+  UpdateAction? setValue(String property, String value) {
+    var setFunc = super.setValue(property, value);
+    if (setFunc != null) return setFunc;
+
+    if (property.startsWith("decoration.")) {
+      if (decoration.value == null) {
+        decoration.value = ElementDecoration();
+      }
+      return decoration.value!.setValue(property.substring(11), value, root);
+    }
+    if (property.startsWith("content.")) {
+      if (content.value == null) {
+        return null;
+      }
+      content.value!.setValue(property.substring(8), value);
+    }
+    return null;
+  }
+
+  @override
+  MyAction? handleAction(String action, Map<String, String> args) {
+    if (action == "addChild") {
+      UIElementType? type;
+      if (args["element"] != null) {
+        if (args["element"] == "null") {
+          type = null;
+        } else if (args["element"] == "branch") {
+          type = UIElementType.empty;
+        } else {
+          type = UIElementType.values.byName(args["element"]!);
+        }
+      }
+      AddDirection? direction;
+      if (args["direction"] != null) {
+        direction = AddDirection.fromString(args["direction"]!);
+      }
+      addChildFromType(type, direction);
+      return null;
+    } else if (action == "setBackgroundColor" || action == "setBorder") {
+      if (decoration.value == null) {
+        decoration.value = ElementDecoration();
+      }
+      return decoration.value!.handleAction(action, args, root);
+    } else if (content.value != null) {
+      MyAction? response = content.value!.handleAction(action, args);
+      if (response != null) return response;
+    }
+    return super.handleAction(action, args);
+  }
 }
 
+@DesignModel(
+    description:
+        "Property of a BranchElement containing information about visual decoration.")
 class ElementDecoration extends ChangeNotifier {
   /// Background color of the [UIElement] as a hex value.
+  @DesignField(
+    description: "Background color of the element.",
+    defaultValue: "ConstantVariable(Colors.transparent)",
+  )
   final VarField<Color> backgroundColor;
 
   /// Corner radius of the [UIElement].
@@ -224,5 +388,123 @@ class ElementDecoration extends ChangeNotifier {
             ? true
             : border.value!.equals(other.border.value!));
     //&& margin.value == other.margin.value;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "backgroundColor": backgroundColor.variable.toString(),
+      "radius": radius.toJson(),
+      "border": border.value?.toJson() ?? {},
+      //"margin": margin.value.toJson(),
+    };
+  }
+
+  static ElementDecoration? tryFromJson(
+      Map<String, dynamic>? json, ElementRoot root) {
+    if (json == null) return null;
+    try {
+      return ElementDecoration.fromJson(json, root);
+    } catch (e) {
+      debugPrint("Failed to parse ElementDecoration: $e");
+      return null;
+    }
+  }
+
+  ElementDecoration.fromJson(Map<String, dynamic> json, ElementRoot root)
+      : backgroundColor = VarField.fromInput(json["backgroundColor"], root) {
+    {
+      if (json["radius"] == null) {
+        _radius = MyRadius.constantAll(0);
+      } else {
+        double? radius = double.tryParse(json["radius"].toString());
+        if (radius == null) {
+          _radius = MyRadius.fromJson(json["radius"], root, notifyListeners);
+        } else {
+          _radius = MyRadius.constantAll(radius);
+        }
+      }
+
+      if (json["border"] == null) {
+        border = OptionalProperty<MyBorder>(null, listener: notifyListeners);
+      } else {
+        Map<String, dynamic> borderJson = json["border"];
+        if (borderJson.isEmpty) {
+          border = OptionalProperty<MyBorder>(null, listener: notifyListeners);
+        } else {
+          border = OptionalProperty<MyBorder>(
+              MyBorder.fromJson(json["border"], root),
+              listener: notifyListeners);
+        }
+      }
+      //margin = OptionalProperty<EdgeInsets>(
+      //    EdgeInsets.fromJson(json["margin"]), listener: notifyListeners);
+    }
+  }
+
+  UpdateAction? setValue(
+    String property,
+    String value,
+    ElementRoot root,
+  ) {
+    switch (property) {
+      case "backgroundColor":
+        return backgroundColor.setValue(value, root);
+      case "radius":
+        var old = radius;
+        radius = MyRadius.fromJson(jsonDecode(value), root, notifyListeners);
+        return UpdateAction<MyRadius>(
+          oldValue: old,
+          newValue: radius,
+          set: (value) => radius = value,
+        );
+
+      case "border":
+        var old = border.value;
+        border.value = MyBorder.fromJson(
+          jsonDecode(value),
+          root,
+        );
+        return UpdateAction<MyBorder?>(
+          oldValue: old,
+          newValue: border.value,
+          set: (value) => border.value = value,
+        );
+    }
+    return null;
+  }
+
+  UpdateAction? handleAction(
+    String action,
+    Map<String, String> args,
+    ElementRoot root,
+  ) {
+    if (action == "setBackgroundColor") {
+      Variable<Color> old = backgroundColor.variable;
+      backgroundColor.variable = (VariableParser.parse<Color>(
+          args["color"]!, root,
+          notifyListeners: notifyListeners));
+      return UpdateAction<Variable<Color>>(
+        oldValue: old,
+        newValue: backgroundColor.variable,
+        set: (value) => backgroundColor.variable = value,
+      );
+    } else if (action == "setBorder") {
+      MyBorder? old = border.value;
+      border.value = MyBorder.fromAction(args, root, border.value);
+      return UpdateAction<MyBorder?>(
+        oldValue: old,
+        newValue: border.value,
+        set: (value) => border.value = value,
+      );
+    } else if (action == "setRadius") {
+      MyRadius? old = radius;
+      radius = MyRadius.fromAction(args, root, radius);
+      return UpdateAction<MyRadius>(
+        oldValue: old,
+        newValue: radius,
+        set: (value) => radius = value,
+      );
+    }
+    return null;
   }
 }

@@ -1,10 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';
+import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
+import 'package:jouhakka_forge/2_services/actions.dart';
 
 /// - `constant`: Value is set in the [UIElement] itself.s
 /// - `root`: Value is binded to a variable in [ElementRoot].
@@ -34,7 +34,7 @@ class EV<T> extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("Error in setRootVariable: $e");
       rethrow;
     }
   }
@@ -85,6 +85,22 @@ abstract class AxisSize {
   double? get renderValue;
 
   AxisSize clone();
+
+  Map<String, dynamic> toJson();
+
+  static AxisSize fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners) {
+    switch (json['type']) {
+      case "controlled":
+        return ControlledSize.fromJson(json, root, notifyListeners);
+      case "shrink":
+        return ShrinkingSize.fromJson(json, root, notifyListeners);
+      case "expand":
+        return ExpandingSize.fromJson(json, root, notifyListeners);
+      default:
+        throw Exception("Invalid AxisSize type: ${json['type']}");
+    }
+  }
 }
 
 class ControlledSize extends AxisSize {
@@ -100,7 +116,20 @@ class ControlledSize extends AxisSize {
   }
 
   @override
+  Map<String, dynamic> toJson() {
+    return {
+      "type": "controlled",
+      "value": value.toString(),
+    };
+  }
+
+  @override
   double get renderValue => value.value;
+
+  ControlledSize.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : value = VariableParser.parse(json['value'], root,
+            notifyListeners: notifyListeners);
 }
 
 abstract class AutomaticSize extends AxisSize {
@@ -120,6 +149,14 @@ abstract class AutomaticSize extends AxisSize {
 
   @override
   AutomaticSize clone({Variable<double>? min, Variable<double>? max});
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "min": min.toString(),
+      "max": max.toString(),
+    };
+  }
 }
 
 class ShrinkingSize extends AutomaticSize {
@@ -138,6 +175,21 @@ class ShrinkingSize extends AutomaticSize {
       max: max ?? this.max,
     );
   }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        "type": "shrink",
+        ...super.toJson(),
+      };
+
+  ShrinkingSize.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : super(
+          min: VariableParser.parse(json['min'], root,
+              notifyListeners: notifyListeners),
+          max: VariableParser.parse(json['max'], root,
+              notifyListeners: notifyListeners),
+        );
 }
 
 class ExpandingSize extends AutomaticSize {
@@ -166,9 +218,29 @@ class ExpandingSize extends AutomaticSize {
       flex: flex ?? this.flex,
     );
   }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'expand',
+        ...super.toJson(),
+        'flex': flex.toString(),
+      };
+
+  ExpandingSize.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : flex = VariableParser.parse(json['flex'], root,
+            notifyListeners: notifyListeners),
+        super(
+          min: VariableParser.parse(json['min'], root,
+              notifyListeners: notifyListeners),
+          max: VariableParser.parse(json['max'], root,
+              notifyListeners: notifyListeners),
+        );
 }
 
 class SizeHolder extends ChangeNotifier {
+  @DesignField(
+      description: "Width of the element", defaultValue: "ExpandingSize")
   AxisSize _width;
   AxisSize _height;
 
@@ -288,141 +360,90 @@ class SizeHolder extends ChangeNotifier {
     height = ControlledSize.constant((_height.renderValue ?? 0) + value);
     notifyListeners();
   }
-}
 
-enum SizeType { fixed, expand, flex, auto }
-
-class AxisSizeOld extends ChangeNotifier {
-  //Size in the axis in pixels. If the type is not fixed, and ElementWidget of UIElement is not built, this value is null.
-  double? _value;
-  double? get value => _value;
-  set value(double? value) {
-    _value = value;
+  AxisSize widthFromJson(
+    Map<String, dynamic> json,
+    ElementRoot root,
+  ) {
+    _width = AxisSize.fromJson(json, root, notifyListeners);
     notifyListeners();
+    return _width;
   }
 
-  int? _flex;
-  double? _minPixels;
-  double? _maxPixels;
-  SizeType _type = SizeType.expand;
-  Function()? valueListener;
-
-  int? get flex => _flex;
-  set flex(int? flex) {
-    _flex = flex;
+  AxisSize heightFromJson(
+    Map<String, dynamic> json,
+    ElementRoot root,
+  ) {
+    _height = AxisSize.fromJson(json, root, notifyListeners);
     notifyListeners();
+    return _height;
   }
 
-  double? get minPixels => _minPixels;
-  set minPixels(double? minPixels) {
-    _minPixels = minPixels;
-    notifyListeners();
-  }
-
-  double? get maxPixels => _maxPixels;
-  set maxPixels(double? maxPixels) {
-    _maxPixels = maxPixels;
-    notifyListeners();
-  }
-
-  SizeType get type => _type;
-  set type(SizeType type) {
-    _type = type;
-    notifyListeners();
-  }
-
-  /// Set [UIElement] size in axis to a fixed pixel value.
-  void fixed(double value) {
-    _value = value;
-    type = SizeType.fixed;
-    notifyListeners();
-    double.infinity;
-  }
-
-  void add(double value) {
-    if (_type != SizeType.fixed) {
-      _type = SizeType.fixed;
-      _value ??= 8;
+  UpdateAction? handleAction(
+    String action,
+    Map<String, String> args,
+    ElementRoot root,
+  ) {
+    Variable<double>? min;
+    if (args['min'] != null) {
+      min = VariableParser.parse(args['min']!, root,
+          notifyListeners: notifyListeners);
     }
-    _value = _value! + value;
-    notifyListeners();
-  }
-
-  void multiply(double value) {
-    if (_type != SizeType.fixed) {
-      _type = SizeType.fixed;
-      _value ??= 8;
+    Variable<double>? max;
+    if (args['max'] != null) {
+      max = VariableParser.parse(args['max']!, root,
+          notifyListeners: notifyListeners);
     }
+    Variable<int>? flex;
+    if (args['flex'] != null) {
+      flex = VariableParser.parse(args['flex']!, root,
+          notifyListeners: notifyListeners);
+    }
+    Variable<double>? controlled;
+    if (args['value'] != null) {
+      controlled = VariableParser.parse(args['value']!, root,
+          notifyListeners: notifyListeners);
+    }
+    AxisSize oldWidth = _width;
+    AxisSize oldHeight = _height;
 
-    _value = _value! * clampDouble(1 + value / 10, 0, 2);
-    notifyListeners();
-  }
-
-  /// Allow [UIElement] size in axis to decide its own size.
-  ///
-  /// If [UIElement] has no content, or it's content has no minimum size in the axis, the [AxisSizeOld] will act like [AxisSizeOld.expand]
-  ///
-  /// If the [UIElement] has content that has minimum size in the axis, the [UIElement] will try to be as small as the content allows.
-  /// - `minPixels` will limit how small the [UIElement] can be.
-  /// - `maxPixels` will limit how big the [UIElement] can be.
-  ///   - If the content is bigger than `maxPixels`, the content will overflow.
-  void auto({double? minPixels, double? maxPixels}) {
-    _type = SizeType.auto;
-    _minPixels = minPixels;
-    _maxPixels = maxPixels;
-    notifyListeners();
-  }
-
-  /// [UIElement] tries to fill all the available space in the axis.
-  /// - `maxPixels` will limit how far the [UIElement] can expand.
-  /// - `minPixels` will allow [UIElement] to request more space from it's parent, if it's not getting enough.
-  ///   - Will either steal space from expanding siblings or overflow
-  /// - `flex` will determine how much space the [UIElement] will take compared to other [UIElement]s with the same parent.
-  ///   - For example, if there are two [UIElement]s with `flex: 1` and `flex: 3`,
-  ///     the first [UIElement] will take 1/4 of the available space and the second [UIElement] will take 3/4 of the available space.
-  void expand({double? minPixels, double? maxPixels, int? flex}) {
-    _type = SizeType.expand;
-    _minPixels = minPixels;
-    _maxPixels = maxPixels;
-    _flex = flex;
-    notifyListeners();
-  }
-
-  void copy(AxisSizeOld other) {
-    _value = other.value;
-    _flex = other._flex;
-    _minPixels = other._minPixels;
-    _maxPixels = other._maxPixels;
-    _type = other._type;
-    notifyListeners();
-  }
-
-  /// Retuns [UIElement] size in the axis, if the type is fixed.
-  ///
-  /// Otherwise returns `null`.
-  double? tryGetFixed() {
-    if (_type == SizeType.fixed) {
-      return value;
+    switch (action) {
+      case "expandWidth":
+        width = ExpandingSize(min: min, max: max, flex: flex);
+        break;
+      case "expandHeight":
+        height = ExpandingSize(min: min, max: max, flex: flex);
+        break;
+      case "hugWidth":
+        width = ShrinkingSize(min: min, max: max);
+        break;
+      case "hugHeight":
+        height = ShrinkingSize(min: min, max: max);
+        break;
+      case "controlledWidth":
+        width = ControlledSize(controlled!);
+        break;
+      case "controlledHeight":
+        height = ControlledSize(controlled!);
+        break;
+      default:
+        return null;
+    }
+    if (width != oldWidth) {
+      return UpdateAction(
+        oldValue: oldWidth,
+        newValue: width,
+        set: (value) => width = value,
+      );
+    }
+    if (height != oldHeight) {
+      return UpdateAction(
+        oldValue: oldHeight,
+        newValue: height,
+        set: (value) => height = value,
+      );
     }
     return null;
-  }
-
-  bool constraints() {
-    return _minPixels != null || _maxPixels != null;
-  }
-
-  @override
-  String toString() {
-    switch (_type) {
-      case SizeType.fixed:
-        return value.toString();
-      case SizeType.expand:
-        return "Expand (${value.toString()}), [${_minPixels.toString()} - ${_maxPixels.toString()}]";
-      case SizeType.flex:
-        return "Flex: $_flex (${value.toString()}), [${_minPixels.toString()} - ${_maxPixels.toString()}]";
-      case SizeType.auto:
-        return "Auto (${value.toString()}), [${_minPixels.toString()} - ${_maxPixels.toString()}]";
-    }
   }
 }
 
@@ -551,6 +572,55 @@ class MyRadius {
         bottomRight.value == other.bottomRight.value &&
         bottomLeft.value == other.bottomLeft.value;
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "topLeft": topLeft.toString(),
+      "topRight": topRight.toString(),
+      "bottomRight": bottomRight.toString(),
+      "bottomLeft": bottomLeft.toString(),
+    };
+  }
+
+  MyRadius.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : topLeft = VariableParser.parse(json['topLeft'], root,
+            notifyListeners: notifyListeners),
+        topRight = VariableParser.parse(json['topRight'], root,
+            notifyListeners: notifyListeners),
+        bottomRight = VariableParser.parse(json['bottomRight'], root,
+            notifyListeners: notifyListeners),
+        bottomLeft = VariableParser.parse(json['bottomLeft'], root,
+            notifyListeners: notifyListeners);
+
+  factory MyRadius.fromAction(
+      Map<String, String> args, ElementRoot root, MyRadius? old) {
+    String side = args['side'] ?? "all";
+    Variable<double> newValue = VariableParser.parse(
+        args['radius'] ?? "0.0", root,
+        notifyListeners: () {});
+    if (side == "all") {
+      return MyRadius(
+          topLeft: newValue,
+          topRight: newValue,
+          bottomRight: newValue,
+          bottomLeft: newValue);
+    } else {
+      return MyRadius(
+        topLeft:
+            side == "topLeft" ? newValue : old?.topLeft ?? ConstantVariable(0),
+        topRight: side == "topRight"
+            ? newValue
+            : old?.topRight ?? ConstantVariable(0),
+        bottomRight: side == "bottomRight"
+            ? newValue
+            : old?.bottomRight ?? ConstantVariable(0),
+        bottomLeft: side == "bottomLeft"
+            ? newValue
+            : old?.bottomLeft ?? ConstantVariable(0),
+      );
+    }
+  }
 }
 
 class MyPadding {
@@ -616,6 +686,46 @@ class MyPadding {
         bottom.value == other.topRight.value &&
         left.value == other.bottomRight.value &&
         right.value == other.bottomLeft.value;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "top": top.toString(),
+      "bottom": bottom.toString(),
+      "left": left.toString(),
+      "right": right.toString(),
+    };
+  }
+
+  MyPadding.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : top = VariableParser.parse(json['top'], root,
+            notifyListeners: notifyListeners),
+        bottom = VariableParser.parse(json['bottom'], root,
+            notifyListeners: notifyListeners),
+        left = VariableParser.parse(json['left'], root,
+            notifyListeners: notifyListeners),
+        right = VariableParser.parse(json['right'], root,
+            notifyListeners: notifyListeners);
+
+  factory MyPadding.fromAction(
+      Map<String, String> args, ElementRoot root, MyPadding? old) {
+    String side = args['side'] ?? "all";
+    Variable<double> newValue = VariableParser.parse(
+        args['padding'] ?? "0.0", root,
+        notifyListeners: () {});
+    if (side == "all") {
+      return MyPadding(
+          top: newValue, bottom: newValue, left: newValue, right: newValue);
+    } else {
+      return MyPadding(
+        top: side == "top" ? newValue : old?.top ?? ConstantVariable(0),
+        bottom:
+            side == "bottom" ? newValue : old?.bottom ?? ConstantVariable(0),
+        left: side == "left" ? newValue : old?.left ?? ConstantVariable(0),
+        right: side == "right" ? newValue : old?.right ?? ConstantVariable(0),
+      );
+    }
   }
 }
 
@@ -702,6 +812,47 @@ class MyBorder extends ChangeNotifier {
         bottom.equals(other.bottom) &&
         left.equals(other.left);
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "top": top.toJson(),
+      "right": right.toJson(),
+      "bottom": bottom.toJson(),
+      "left": left.toJson(),
+    };
+  }
+
+  MyBorder.fromJson(Map<String, dynamic> json, ElementRoot root)
+      : top = MyBorderSide.fromJson(json['top'], root),
+        right = MyBorderSide.fromJson(json['right'], root),
+        bottom = MyBorderSide.fromJson(json['bottom'], root),
+        left = MyBorderSide.fromJson(json['left'], root);
+
+  factory MyBorder.fromAction(
+      Map<String, String> args, ElementRoot root, MyBorder? old) {
+    String side = args['side'] ?? "all";
+    MyBorderSide newSide = MyBorderSide.fromJson(args, root);
+    if (side == "all") {
+      return MyBorder(
+        top: newSide,
+        right: newSide,
+        bottom: newSide,
+        left: newSide,
+      );
+    } else {
+      return MyBorder(
+        top: side == "top" ? newSide : old?.top ?? MyBorder.defaultBorder.top,
+        right: side == "right"
+            ? newSide
+            : old?.right ?? MyBorder.defaultBorder.right,
+        bottom: side == "bottom"
+            ? newSide
+            : old?.bottom ?? MyBorder.defaultBorder.bottom,
+        left:
+            side == "left" ? newSide : old?.left ?? MyBorder.defaultBorder.left,
+      );
+    }
+  }
 }
 
 class MyBorderSide extends ChangeNotifier {
@@ -743,10 +894,24 @@ class MyBorderSide extends ChangeNotifier {
   bool equals(MyBorderSide other) {
     return color.value == other.color.value && width.value == other.width.value;
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "color": color.variable.toString(),
+      "width": width.variable.toString(),
+    };
+  }
+
+  MyBorderSide.fromJson(Map<String, dynamic> json, ElementRoot root)
+      : color = VarField.fromInput(json['color'] ?? "#000000FF", root),
+        width = VarField.fromInput(json['width'] ?? "1.0", root) {
+    color.addListener(notifyListeners);
+    width.addListener(notifyListeners);
+  }
 }
 
 class VarField<T> extends ChangeNotifier {
-  Variable<T> _variable;
+  late Variable<T> _variable;
 
   VarField(Variable<T> variable) : _variable = variable {
     if (_variable is ChangeNotifier) {
@@ -755,6 +920,11 @@ class VarField<T> extends ChangeNotifier {
   }
 
   VarField.constant(T value) : _variable = ConstantVariable(value);
+
+  VarField.fromInput(String input, ElementRoot root) {
+    _variable =
+        VariableParser.parse(input, root, notifyListeners: notifyListeners);
+  }
 
   Variable<T> get variable => _variable;
   T get value => variable.value;
@@ -773,6 +943,17 @@ class VarField<T> extends ChangeNotifier {
   void copy(VarField<T> other) {
     _variable = other.variable;
     notifyListeners();
+  }
+
+  UpdateAction<Variable<T>> setValue(String value, ElementRoot root) {
+    var old = _variable;
+    _variable =
+        VariableParser.parse(value, root, notifyListeners: notifyListeners);
+    return UpdateAction(
+      oldValue: old,
+      newValue: _variable,
+      set: (value) => variable = value,
+    );
   }
 
   @override
