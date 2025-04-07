@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-class AIService {
+class AIServiceOld {
   static final String _apiKey = Platform.environment['OPENAI_KEY_MUOTOI']!;
 
   static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';

@@ -353,28 +353,7 @@ class VariableParser {
         return GlobalVariable<Color>(input.substring(1), notifyListeners);
       }
     } else {
-      String hex = input.replaceFirst('#', '');
-      if (hex.length == 1) {
-        hex = hex * 6; // Expand single digit hex to full form
-      } else if (hex.length == 2) {
-        hex = hex * 3; // Expand double digit hex to full form
-      } else if (hex.length == 3) {
-        hex = hex
-            .split('')
-            .map((char) => char * 2)
-            .join(); // Expand shorthand hex
-      } else if (hex.length == 4) {
-        hex = hex
-            .split('')
-            .map((char) => char * 2)
-            .join(); // Expand shorthand hex with alpha
-      }
-
-      if (hex.length == 6) {
-        hex = 'FF$hex'; // Add alpha value if not provided
-      }
-
-      return ConstantVariable<Color>(Color(int.parse(hex, radix: 16)));
+      return ConstantVariable<Color>(ColorExtension.fromHex(input));
     }
   }
 

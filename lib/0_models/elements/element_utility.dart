@@ -379,11 +379,8 @@ class SizeHolder extends ChangeNotifier {
     return _height;
   }
 
-  UpdateAction? handleAction(
-    String action,
-    Map<String, String> args,
-    ElementRoot root,
-  ) {
+  MyAction? handleAction(
+      String action, Map<String, String> args, ElementRoot root) {
     Variable<double>? min;
     if (args['min'] != null) {
       min = VariableParser.parse(args['min']!, root,
@@ -396,7 +393,7 @@ class SizeHolder extends ChangeNotifier {
     }
     Variable<int>? flex;
     if (args['flex'] != null) {
-      flex = VariableParser.parse(args['flex']!, root,
+      flex = VariableParser.parse<int>(args['flex']!, root,
           notifyListeners: notifyListeners);
     }
     Variable<double>? controlled;
@@ -408,23 +405,35 @@ class SizeHolder extends ChangeNotifier {
     AxisSize oldHeight = _height;
 
     switch (action) {
-      case "expandWidth":
-        width = ExpandingSize(min: min, max: max, flex: flex);
+      case "width":
+        String sizeType = args["type"] ?? "controlled";
+        switch (sizeType) {
+          case "expand":
+            width = ExpandingSize(
+                min: min, max: max, flex: flex ?? ConstantVariable(1));
+            break;
+          case "hug":
+            width = ShrinkingSize(min: min, max: max);
+            break;
+          case "controlled":
+            width = ControlledSize(controlled!);
+            break;
+        }
         break;
-      case "expandHeight":
-        height = ExpandingSize(min: min, max: max, flex: flex);
-        break;
-      case "hugWidth":
-        width = ShrinkingSize(min: min, max: max);
-        break;
-      case "hugHeight":
-        height = ShrinkingSize(min: min, max: max);
-        break;
-      case "controlledWidth":
-        width = ControlledSize(controlled!);
-        break;
-      case "controlledHeight":
-        height = ControlledSize(controlled!);
+      case "height":
+        String sizeType = args["type"] ?? "controlled";
+        switch (sizeType) {
+          case "expand":
+            height = ExpandingSize(
+                min: min, max: max, flex: flex ?? ConstantVariable(1));
+            break;
+          case "hug":
+            height = ShrinkingSize(min: min, max: max);
+            break;
+          case "controlled":
+            height = ControlledSize(controlled!);
+            break;
+        }
         break;
       default:
         return null;
@@ -729,7 +738,7 @@ class MyPadding {
   }
 }
 
-class MyBorder extends ChangeNotifier {
+class MyBorder {
   final MyBorderSide top;
   final MyBorderSide right;
   final MyBorderSide bottom;
@@ -740,35 +749,18 @@ class MyBorder extends ChangeNotifier {
     required this.right,
     required this.bottom,
     required this.left,
-  }) {
-    top.addListener(notifyListeners);
-    right.addListener(notifyListeners);
-    bottom.addListener(notifyListeners);
-    left.addListener(notifyListeners);
-  }
+  });
 
-  factory MyBorder.all(Color color, double width) => MyBorder(
-      top: MyBorderSide(color, width),
-      right: MyBorderSide(color, width),
-      bottom: MyBorderSide(color, width),
-      left: MyBorderSide(color, width));
+  MyBorder.all(Variable<Color> color, Variable<double> width)
+      : top = MyBorderSide(color: color, width: width),
+        right = MyBorderSide(color: color, width: width),
+        bottom = MyBorderSide(color: color, width: width),
+        left = MyBorderSide(color: color, width: width);
 
-  @override
-  void dispose() {
-    top.removeListener(notifyListeners);
-    right.removeListener(notifyListeners);
-    bottom.removeListener(notifyListeners);
-    left.removeListener(notifyListeners);
+  factory MyBorder.constantAll(Color color, double width) =>
+      MyBorder.all(ConstantVariable(color), ConstantVariable(width));
 
-    //debugPrint("MyBorder.dispose: Disposing sides");
-    top.dispose();
-    right.dispose();
-    bottom.dispose();
-    left.dispose();
-    super.dispose();
-  }
-
-  static MyBorder get defaultBorder => MyBorder.all(Colors.black, 1);
+  static MyBorder get defaultBorder => MyBorder.constantAll(Colors.black, 1);
 
   bool get isConstant =>
       top.isConstant &&
@@ -776,12 +768,12 @@ class MyBorder extends ChangeNotifier {
       bottom.isConstant &&
       left.isConstant;
 
-  MyBorder clone() {
+  MyBorder clone(void Function() notifyListeners) {
     return MyBorder(
-      top: MyBorderSide.from(top),
-      right: MyBorderSide.from(right),
-      bottom: MyBorderSide.from(bottom),
-      left: MyBorderSide.from(left),
+      top: MyBorderSide.from(top, notifyListeners),
+      right: MyBorderSide.from(right, notifyListeners),
+      bottom: MyBorderSide.from(bottom, notifyListeners),
+      left: MyBorderSide.from(left, notifyListeners),
     );
   }
 
@@ -822,16 +814,17 @@ class MyBorder extends ChangeNotifier {
     };
   }
 
-  MyBorder.fromJson(Map<String, dynamic> json, ElementRoot root)
-      : top = MyBorderSide.fromJson(json['top'], root),
-        right = MyBorderSide.fromJson(json['right'], root),
-        bottom = MyBorderSide.fromJson(json['bottom'], root),
-        left = MyBorderSide.fromJson(json['left'], root);
+  MyBorder.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : top = MyBorderSide.fromJson(json['top'], root, notifyListeners),
+        right = MyBorderSide.fromJson(json['right'], root, notifyListeners),
+        bottom = MyBorderSide.fromJson(json['bottom'], root, notifyListeners),
+        left = MyBorderSide.fromJson(json['left'], root, notifyListeners);
 
-  factory MyBorder.fromAction(
-      Map<String, String> args, ElementRoot root, MyBorder? old) {
+  factory MyBorder.fromAction(Map<String, String> args, ElementRoot root,
+      MyBorder? old, void Function() notifyListeners) {
     String side = args['side'] ?? "all";
-    MyBorderSide newSide = MyBorderSide.fromJson(args, root);
+    MyBorderSide newSide = MyBorderSide.fromJson(args, root, notifyListeners);
     if (side == "all") {
       return MyBorder(
         top: newSide,
@@ -855,41 +848,22 @@ class MyBorder extends ChangeNotifier {
   }
 }
 
-class MyBorderSide extends ChangeNotifier {
-  final VarField<Color> color;
-  final VarField<double> width;
+class MyBorderSide {
+  final Variable<Color> color;
+  final Variable<double> width;
 
   bool get enabled => color.value != Colors.transparent && width.value > 0;
-  bool get isConstant =>
-      color.variable is ConstantVariable && width.variable is ConstantVariable;
+  bool get isConstant => color is ConstantVariable && width is ConstantVariable;
 
-  void copy(MyBorderSide other) {
-    color.copy(other.color);
-    width.copy(other.width);
-  }
+  MyBorderSide({required this.color, required this.width});
 
-  MyBorderSide(Color color, double width)
-      : color = VarField.constant(color),
-        width = VarField.constant(width) {
-    this.color.addListener(notifyListeners);
-    this.width.addListener(notifyListeners);
-  }
+  MyBorderSide.constant(Color color, double width)
+      : color = ConstantVariable(color),
+        width = ConstantVariable(width);
 
-  MyBorderSide.from(MyBorderSide other)
-      : color = VarField(other.color.variable),
-        width = VarField(other.width.variable) {
-    color.addListener(notifyListeners);
-    width.addListener(notifyListeners);
-  }
-
-  @override
-  void dispose() {
-    color.removeListener(notifyListeners);
-    width.removeListener(notifyListeners);
-    color.dispose();
-    width.dispose();
-    super.dispose();
-  }
+  MyBorderSide.from(MyBorderSide other, void Function() notifyListeners)
+      : color = other.color.clone(notifyListeners: notifyListeners),
+        width = other.width.clone(notifyListeners: notifyListeners);
 
   bool equals(MyBorderSide other) {
     return color.value == other.color.value && width.value == other.width.value;
@@ -897,17 +871,17 @@ class MyBorderSide extends ChangeNotifier {
 
   Map<String, dynamic> toJson() {
     return {
-      "color": color.variable.toString(),
-      "width": width.variable.toString(),
+      "color": color.toString(),
+      "width": width.toString(),
     };
   }
 
-  MyBorderSide.fromJson(Map<String, dynamic> json, ElementRoot root)
-      : color = VarField.fromInput(json['color'] ?? "#000000FF", root),
-        width = VarField.fromInput(json['width'] ?? "1.0", root) {
-    color.addListener(notifyListeners);
-    width.addListener(notifyListeners);
-  }
+  MyBorderSide.fromJson(Map<String, dynamic> json, ElementRoot root,
+      void Function() notifyListeners)
+      : color = VariableParser.parse<Color>(json['color'] ?? "#000000FF", root,
+            notifyListeners: notifyListeners),
+        width = VariableParser.parse(json['width'] ?? "1.0", root,
+            notifyListeners: notifyListeners);
 }
 
 class VarField<T> extends ChangeNotifier {
@@ -931,7 +905,11 @@ class VarField<T> extends ChangeNotifier {
 
   set variable(Variable<T> variable) {
     _variable = variable;
+    notifyListeners();
+  }
 
+  void change(Variable<T> Function(void Function() notifyListeners) change) {
+    _variable = change(notifyListeners);
     notifyListeners();
   }
 

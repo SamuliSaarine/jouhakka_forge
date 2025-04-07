@@ -57,32 +57,37 @@ class ActionService {
   static bool actionsFromList(List<Map<String, dynamic>> actionList) {
     try {
       for (Map<String, dynamic> action in actionList) {
-        try {
-          String actionType = action['action'];
-          UIElement? target = MyAction.elementFromPath(
-              ((action['target'] ?? []) as List).cast<int>());
-
-          if (target == null) {
-            debugPrint("Target element is null");
-            return false;
-          }
-          Map<String, String> args = {};
-          List<Map<String, dynamic>> argsList =
-              (action['arguments'] as List).cast<Map<String, dynamic>>();
-          for (Map<String, dynamic> arg in argsList) {
-            args[arg['name']] = arg['value'];
-          }
-          MyAction? result = target.handleAction(actionType, args);
-          if (result != null) {
-            appliedActions.add(result);
-          }
-        } catch (e) {
-          debugPrint("Error running action $action: $e");
-        }
+        singleAction(action);
       }
       return true;
     } catch (e, s) {
       debugPrint("Error in actionsFromList: $e | $s");
+      return false;
+    }
+  }
+
+  static bool singleAction(Map<String, dynamic> action) {
+    try {
+      debugPrint("Running action: $action");
+      UIElement? target = MyAction.elementFromPath(
+          ((action['target'] ?? []) as List).cast<int>());
+
+      if (target == null) {
+        debugPrint("Target element is null");
+        return false;
+      }
+
+      Map<String, String> actionMap =
+          (action['action'] as Map).cast<String, String>();
+      String actionType = actionMap['type']!;
+      actionMap.remove('type');
+      MyAction? result = target.handleAction(actionType, actionMap);
+      if (result != null) {
+        appliedActions.add(result);
+      }
+      return true;
+    } catch (e) {
+      debugPrint("Error running action $action: $e");
       return false;
     }
   }

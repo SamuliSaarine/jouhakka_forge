@@ -361,7 +361,7 @@ extension ElementDecorationEditor on ElementDecoration {
             (
               "Border",
               LucideIcons.square,
-              () => border.value = MyBorder.all(Colors.black, 1)
+              () => border.value = MyBorder.constantAll(Colors.black, 1)
             ),
         ];
         return HeadPropertyBox(
@@ -437,7 +437,8 @@ extension OverflowEditor on ContentOverflow {
 }
 
 extension BorderEditor on MyBorder {
-  Widget getEditor(UIElement element, void Function() onDelete) {
+  Widget getEditor(UIElement element, void Function(MyBorder? old) onChanged,
+      {required void Function() notifyListeners}) {
     String selected = "All";
 
     return StatefulBuilder(builder: (context, setState) {
@@ -466,22 +467,19 @@ extension BorderEditor on MyBorder {
             selectMode("Left", LucideIcons.arrowLeftToLine),
           ],
         );
+      }
 
-        /*return ClickDetector(
-        primaryActionDown: (_) {
-          toggleExpand();
-        },
-        builder: (hovering, _) => Row(
-          children: [
-            const Text("Border"),
-            Icon(
-              expandEditor
-                  ? Icons.keyboard_arrow_down
-                  : Icons.keyboard_arrow_right,
-            ),
-          ],
-        ),
-      );*/
+      void updateBorder(
+          {MyBorderSide? top,
+          MyBorderSide? right,
+          MyBorderSide? bottom,
+          MyBorderSide? left}) {
+        onChanged(MyBorder(
+          top: top ?? this.top,
+          right: right ?? this.right,
+          bottom: bottom ?? this.bottom,
+          left: left ?? this.left,
+        ));
       }
 
       return SubPropertyBox(
@@ -491,27 +489,30 @@ extension BorderEditor on MyBorder {
           ContextMenuItem(
             "Delete",
             action: (_) {
-              onDelete();
+              onChanged(null);
             },
           ),
         ],
         children: [
           header(),
           if (selected == "All" || selected == "Top")
-            ...top.getEditor(
-              context,
-              element,
-              onChanged: () {
-                if (selected == "All") {
-                  right.copy(top);
-                  bottom.copy(top);
-                  left.copy(top);
-                }
-              },
-            ),
-          if (selected == "Bottom") ...bottom.getEditor(context, element),
-          if (selected == "Right") ...right.getEditor(context, element),
-          if (selected == "Left") ...left.getEditor(context, element),
+            ...top.getEditor(context, element, onChanged: (newSide) {
+              bool isAll = selected == "All";
+              updateBorder(
+                  top: newSide,
+                  right: isAll ? newSide : null,
+                  bottom: isAll ? newSide : null,
+                  left: isAll ? newSide : null);
+            }),
+          if (selected == "Bottom")
+            ...left.getEditor(context, element,
+                onChanged: (newSide) => updateBorder(bottom: newSide)),
+          if (selected == "Right")
+            ...left.getEditor(context, element,
+                onChanged: (newSide) => updateBorder(right: newSide)),
+          if (selected == "Left")
+            ...left.getEditor(context, element,
+                onChanged: (newSide) => updateBorder(left: newSide)),
         ],
       );
     });
@@ -520,21 +521,58 @@ extension BorderEditor on MyBorder {
 
 extension BorderSideEditor on MyBorderSide {
   List<Widget> getEditor(BuildContext context, UIElement element,
-      {void Function()? onChanged}) {
+      {void Function(MyBorderSide)? onChanged}) {
+    final TextEditingController widthController =
+        TextEditingController(text: width.toString());
+    final TextEditingController colorController =
+        TextEditingController(text: color.toString());
+
     return [
       PropertyFieldBox(
         title: "Width:",
         tip: "Border width",
         contextMenuItems: const [],
-        content: width.getEditor(context, element,
-            afterSet: () => onChanged?.call()),
+        content: MyTextField(
+          controller: widthController,
+          onSubmitted: (value) {
+            try {
+              Variable<double> newWidth = VariableParser.parse<double>(
+                  value, element.root,
+                  notifyListeners: () {});
+              onChanged?.call(MyBorderSide(
+                color: color,
+                width: newWidth,
+              ));
+              return true;
+            } catch (e) {
+              debugPrint("Changing width failed: $value. Error: $e");
+              return false;
+            }
+          },
+        ),
       ),
       PropertyFieldBox(
         title: "Color:",
         tip: "Border color",
         contextMenuItems: const [],
-        content: color.getEditor(context, element,
-            afterSet: () => onChanged?.call()),
+        content: MyTextField(
+          controller: colorController,
+          onSubmitted: (value) {
+            try {
+              Variable<Color> newColor = VariableParser.parse<Color>(
+                  value, element.root,
+                  notifyListeners: () {});
+              onChanged?.call(MyBorderSide(
+                color: newColor,
+                width: width,
+              ));
+              return true;
+            } catch (e) {
+              debugPrint("Changing color failed: $value. Error: $e");
+              return false;
+            }
+          },
+        ),
       ),
     ];
   }

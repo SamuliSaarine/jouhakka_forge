@@ -7,12 +7,13 @@ import 'package:jouhakka_forge/3_components/state_management/value_listener.dart
 import 'package:jouhakka_forge/4_views/editor_view.dart';
 import 'package:jouhakka_forge/5_style/colors.dart';
 import 'package:jouhakka_forge/5_style/icons/lucide_map.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:web/web.dart' as web;
 // Purpose of this app is to offer tools to quickly create responsive UI design for apps and websites.
 
 const bool _debugPerformance = false;
 
-void main() {
+void main() async {
   if (_debugPerformance) {
     debugRepaintRainbowEnabled = true;
     debugProfileLayoutsEnabled = true;
@@ -26,6 +27,12 @@ void main() {
   debugPrint('Dark mode: ${MyColors.darkMode.value}');
 
   initializeFirstLetterIndexes();
+
+  await supabase.Supabase.initialize(
+    url: 'https://almabhbcetggcixddiai.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsbWFiaGJjZXRnZ2NpeGRkaWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1MDU0MDgsImV4cCI6MjA1OTA4MTQwOH0.faJjp2LGLgLssrHpPrRo6UBcdcxyVt-bSENvWLEQPoA',
+  );
 
   runApp(const MainApp());
 }

@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
 import 'package:jouhakka_forge/0_models/elements/ui_element.dart';
-import 'package:jouhakka_forge/2_services/actions.dart';
 import 'package:jouhakka_forge/2_services/ai_service.dart';
 import 'package:jouhakka_forge/2_services/session.dart';
 import 'package:jouhakka_forge/3_components/element/inspector_modules/a_inspector_modules.dart';
@@ -23,9 +20,7 @@ class InspectorView extends StatelessWidget {
   final ElementRoot root;
   const InspectorView(this.root, {super.key});
 
-  //TODO: Make decoration editable
   //TODO: Implement editor for image elements
-  //TODO: Make padding editable
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -106,22 +101,26 @@ class InspectorView extends StatelessWidget {
   Widget _rootInspector(BuildContext context) {
     void generateDesign(String promt) async {
       try {
-        String extendedPromt = await AIService.extendPromt(promt);
-        /*String response = await AIService.getFinalFormat(extendedPromt);
-        Map<String, dynamic> json = jsonDecode(response);
-        ActionService.listFromMap(json);
-        Map<String, dynamic> design = root.body.toJson();
-        String response2 =
-            await AIService.editDesing(design.toString(), extendedPromt);
-        Map<String, dynamic> json2 = jsonDecode(response2);
-        root.body = BranchElement.fromJson(json2, root, null);*/
-        final response = await AIService.initialActions(
-          extendedPromt,
-        );
-        ActionService.actionsFromList(response);
+        AIService.generateDesign(promt);
       } catch (e, s) {
-        debugPrint("Failed to parse JSON: $e | $s");
+        debugPrint("Failed to process actions: $e | $s");
       }
+    }
+
+    final promptController = TextEditingController();
+
+    void extendPrompt(String prompt) async {
+      debugPrint("Extending prompt: $prompt:");
+      final response = await AIService.extendPrompt(prompt, onChunk: (chunk) {
+        promptController.value = TextEditingValue(
+          text: promptController.text + chunk,
+          selection: TextSelection.collapsed(
+            offset: promptController.text.length + chunk.length,
+          ),
+        );
+        // Move cursor to end which will also scroll the view
+      });
+      debugPrint("Extended prompt: $response");
     }
 
     return _inspectorBuilder(
@@ -153,23 +152,29 @@ class InspectorView extends StatelessWidget {
           },
         ),
         Gap.h12,
-        MyTextField(
-          controller: TextEditingController(),
-          onSubmitted: (value) {
-            if (value.isNotEmpty) {
-              try {
-                List<Map<String, dynamic>> json =
-                    (jsonDecode(value) as List).cast<Map<String, dynamic>>();
-                debugPrint("Parsed list with ${json.length} actions");
-                return ActionService.actionsFromList(json);
-                //root.body = BranchElement.fromJson(json, root, null);
-              } catch (e, s) {
-                debugPrint("Failed to parse user JSON: $e | $s");
-                return false;
+        SizedBox(
+          height: 200,
+          child: MyTextField(
+            controller: promptController,
+            expands: true,
+            onSubmitted: (value) {
+              if (value.isNotEmpty) {
+                try {
+                  extendPrompt(value);
+                  return true;
+                  /*List<Map<String, dynamic>> json =
+                      (jsonDecode(value) as List).cast<Map<String, dynamic>>();
+                  debugPrint("Parsed list with ${json.length} actions");
+                  return ActionService.actionsFromList(json);*/
+                  //root.body = BranchElement.fromJson(json, root, null);
+                } catch (e, s) {
+                  debugPrint("Failed to parse user JSON: $e | $s");
+                  return false;
+                }
               }
-            }
-            return true;
-          },
+              return true;
+            },
+          ),
         ),
       ],
     );

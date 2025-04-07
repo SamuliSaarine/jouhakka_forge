@@ -13,6 +13,7 @@ class MyNumberField<T extends num> extends StatefulWidget {
   final void Function()? onTap;
   final Function()? onSubmitted;
   final bool isSelectedOverride;
+
   const MyNumberField({
     super.key,
     required this.controller,
@@ -118,6 +119,7 @@ class MyTextField extends StatefulWidget {
   final void Function()? onTap;
   final TextStyle? textStyle;
   final bool isSelectedOverride;
+  final bool expands;
 
   const MyTextField({
     super.key,
@@ -128,6 +130,7 @@ class MyTextField extends StatefulWidget {
     this.onSubmitted,
     this.onTap,
     this.isSelectedOverride = false,
+    this.expands = false,
   });
 
   @override
@@ -167,7 +170,12 @@ class _MyTextFieldState extends State<MyTextField> {
       onExit: (_) => setState(() => _isHovering = false),
       child: TextField(
         controller: widget.controller,
+        expands: widget.expands,
+        maxLines: widget.expands ? null : 1,
+        minLines: widget.expands ? null : 1,
         onTap: widget.onTap,
+        textAlignVertical: widget.expands ? TextAlignVertical.top : null,
+        textInputAction: TextInputAction.done,
         decoration: InputDecoration(
           hintText: widget.hint?.type == HintType.background
               ? widget.hint!.text

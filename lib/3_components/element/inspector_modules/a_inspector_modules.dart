@@ -52,11 +52,12 @@ extension SizeEditor on SizeHolder {
     if (element.parent == null) {
       return const Center(
         child: Padding(
-            padding: EdgeInsets.all(8),
-            child: Text(
-              "Size cannot be edited for root element",
-              style: TextStyle(color: MyColors.storm),
-            )),
+          padding: EdgeInsets.all(8),
+          child: Text(
+            "Size cannot be edited for root element",
+            style: TextStyle(color: MyColors.storm),
+          ),
+        ),
       );
     }
     bool selectBoth = false;
@@ -604,9 +605,9 @@ extension OptionalPropertyEditor<T> on OptionalProperty<T> {
       );
     } else if (T == MyBorder) {
       assert(value != null, "Do not create border editor if value is null");
-      return (value as MyBorder).getEditor(element, () {
+      return (value as MyBorder).getEditor(element, (old) {
         value = null;
-      });
+      }, notifyListeners: listener);
     }
 
     return const Text("Unsupported type");

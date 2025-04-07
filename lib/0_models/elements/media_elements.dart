@@ -204,7 +204,8 @@ class TextElement extends LeafElement {
   MyAction? handleAction(String action, Map<String, String> args) {
     switch (action) {
       case "setText":
-        var newValue = VariableParser.parse<String>(args["text"]!, root,
+        var newValue = VariableParser.parse<String>(
+            args["text"] ?? text.value, root,
             notifyListeners: notifyListeners);
         if (text == newValue) return null;
         var old = text;
@@ -214,48 +215,46 @@ class TextElement extends LeafElement {
           newValue: text,
           set: (v) => text = v,
         );
-      case "setColor":
-        var newValue = VariableParser.parse<Color>(args["color"]!, root,
-            notifyListeners: notifyListeners);
-        if (color == newValue) return null;
-        var old = color;
-        color = newValue;
-        return UpdateAction(
-          oldValue: old,
-          newValue: color,
-          set: (v) => color = v,
-        );
-      case "setFontSize":
-        var newValue = VariableParser.parse<double>(args["fontSize"]!, root,
-            notifyListeners: notifyListeners);
-        if (fontSize == newValue) return null;
-        var old = fontSize;
-        fontSize = newValue;
-        return UpdateAction(
-          oldValue: old,
-          newValue: fontSize,
-          set: (v) => fontSize = v,
-        );
-      case "setFontWeight":
-        var newValue = FontWeightExtension.fromString(args["fontWeight"]!);
-        if (fontWeight == newValue) return null;
-        var old = fontWeight;
-        fontWeight = newValue;
-        return UpdateAction(
-          oldValue: old,
-          newValue: fontWeight,
-          set: (v) => fontWeight = v,
-        );
-      case "setAlignment":
-        var newValue = AlignmentExtension.fromString(args["alignment"]!);
-        if (alignment == newValue) return null;
-        var old = alignment;
-        alignment = newValue;
-        return UpdateAction(
-          oldValue: old,
-          newValue: alignment,
-          set: (v) => alignment = v,
-        );
+      case "setTextStyle":
+        if (args["fontSize"] != null) {
+          var newValue = VariableParser.parse<double>(
+              args["fontSize"] ?? "18", root,
+              notifyListeners: notifyListeners);
+          if (fontSize == newValue) return null;
+          var old = fontSize;
+          fontSize = newValue;
+          return UpdateAction(
+            oldValue: old,
+            newValue: fontSize,
+            set: (v) => fontSize = v,
+          );
+        }
+        if (args["fontWeight"] != null) {
+          var newValue =
+              FontWeightExtension.fromString(args["fontWeight"] ?? "medium");
+          if (fontWeight == newValue) return null;
+          var old = fontWeight;
+          fontWeight = newValue;
+          return UpdateAction(
+            oldValue: old,
+            newValue: fontWeight,
+            set: (v) => fontWeight = v,
+          );
+        }
+        if (args["color"] != null) {
+          var newValue = VariableParser.parse<Color>(
+              args["color"] ?? "#000000FF", root,
+              notifyListeners: notifyListeners);
+          if (color == newValue) return null;
+          var old = color;
+          color = newValue;
+          return UpdateAction(
+            oldValue: old,
+            newValue: color,
+            set: (v) => color = v,
+          );
+        }
+        return null;
     }
     return super.handleAction(action, args);
   }
@@ -414,41 +413,38 @@ class ImageElement extends LeafElement {
   @override
   MyAction? handleAction(String action, Map<String, String> args) {
     switch (action) {
-      case "setImagePath":
-        String old = imagePath;
-        imagePath = args["path"]!;
-        return UpdateAction(
-          oldValue: old,
-          newValue: imagePath,
-          set: (v) => imagePath = v,
-        );
-      case "setSource":
-        ImageSource old = source;
-        source = ImageSource.values.firstWhere(
-            (e) => e.toString() == args["source"],
-            orElse: () => ImageSource.asset);
-        return UpdateAction(
-          oldValue: old,
-          newValue: source,
-          set: (v) => source = v,
-        );
-      case "setFit":
-        BoxFit old = fit;
-        fit = BoxFit.values.firstWhere((e) => e.toString() == args["fit"],
-            orElse: () => BoxFit.cover);
-        return UpdateAction(
-          oldValue: old,
-          newValue: fit,
-          set: (v) => fit = v,
-        );
-      case "setAlignment":
-        Alignment old = alignment;
-        alignment = AlignmentExtension.fromString(args["alignment"]!);
-        return UpdateAction(
-          oldValue: old,
-          newValue: alignment,
-          set: (v) => alignment = v,
-        );
+      case "setImageProps":
+        if (args["path"] != null) {
+          String old = imagePath;
+          imagePath = args["path"]!;
+          return UpdateAction(
+            oldValue: old,
+            newValue: imagePath,
+            set: (v) => imagePath = v,
+          );
+        }
+        if (args["source"] != null) {
+          ImageSource old = source;
+          source = ImageSource.values.firstWhere(
+              (e) => e.toString() == args["source"],
+              orElse: () => ImageSource.asset);
+          return UpdateAction(
+            oldValue: old,
+            newValue: source,
+            set: (v) => source = v,
+          );
+        }
+        if (args["fit"] != null) {
+          BoxFit old = fit;
+          fit = BoxFit.values.firstWhere((e) => e.toString() == args["fit"],
+              orElse: () => BoxFit.cover);
+          return UpdateAction(
+            oldValue: old,
+            newValue: fit,
+            set: (v) => fit = v,
+          );
+        }
+        return null;
     }
     return super.handleAction(action, args);
   }
@@ -563,26 +559,31 @@ class IconElement extends LeafElement {
   MyAction? handleAction(String action, Map<String, String> args) {
     switch (action) {
       case "setIcon":
-        int? codePoint = findCodePoint(args['icon']!);
-        if (codePoint == null || icon.codePoint == codePoint) return null;
-        var old = icon;
-        icon = IconData(codePoint, fontFamily: 'LucideIcons');
-        return UpdateAction(
-          oldValue: old,
-          newValue: icon,
-          set: (v) => icon = v,
-        );
-      case "setColor":
-        var newValue = VariableParser.parse<Color>(args["color"]!, root,
-            notifyListeners: notifyListeners);
-        if (color == newValue) return null;
-        var old = color;
-        color = newValue;
-        return UpdateAction(
-          oldValue: old,
-          newValue: color,
-          set: (v) => color = v,
-        );
+        if (args["icon"] != null) {
+          int? codePoint = findCodePoint(args["icon"] ?? "star");
+          if (codePoint == null || icon.codePoint == codePoint) return null;
+          var old = icon;
+          icon = IconData(codePoint, fontFamily: 'LucideIcons');
+          return UpdateAction(
+            oldValue: old,
+            newValue: icon,
+            set: (v) => icon = v,
+          );
+        }
+        if (args["color"] != null) {
+          var newValue = VariableParser.parse<Color>(
+              args["color"] ?? color.toString(), root,
+              notifyListeners: notifyListeners);
+          if (color == newValue) return null;
+          var old = color;
+          color = newValue;
+          return UpdateAction(
+            oldValue: old,
+            newValue: color,
+            set: (v) => color = v,
+          );
+        }
+        return null;
     }
     return super.handleAction(action, args);
   }

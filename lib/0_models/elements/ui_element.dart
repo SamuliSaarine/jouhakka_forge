@@ -5,7 +5,6 @@ import 'package:jouhakka_forge/0_models/elements/container_element.dart';
 import 'package:jouhakka_forge/0_models/elements/element_utility.dart';
 import 'package:jouhakka_forge/0_models/elements/media_elements.dart';
 import 'package:jouhakka_forge/0_models/page.dart';
-import 'package:jouhakka_forge/0_models/utility_models.dart';
 import 'package:jouhakka_forge/0_models/variable_map.dart';
 import 'package:jouhakka_forge/1_helpers/build/annotations.dart';
 import 'package:jouhakka_forge/1_helpers/element_helper.dart';
@@ -162,6 +161,19 @@ abstract class UIElement extends ChangeNotifier {
       return size.handleAction(action, args, root);
     }
 
+    switch (action) {
+      case "setSize":
+        return size.handleAction(
+            args["dimension"] == "width" ? "width" : "height",
+            {
+              "type": args["sizeType"] ?? "controlled",
+              "value": args["value"] ?? "0.0",
+              "min": args["min"] ?? "0.0",
+              "max": args["max"] ?? "inf",
+              "flex": args["flex"] ?? "1.0",
+            },
+            root);
+    }
     return null;
   }
 }
@@ -271,31 +283,36 @@ class BranchElement extends UIElement {
 
   @override
   MyAction? handleAction(String action, Map<String, String> args) {
-    if (action == "addChild") {
-      UIElementType? type;
-      if (args["element"] != null) {
-        if (args["element"] == "null") {
-          type = null;
-        } else if (args["element"] == "branch") {
-          type = UIElementType.empty;
-        } else {
-          type = UIElementType.values.byName(args["element"]!);
+    switch (action) {
+      case "addChild":
+        UIElementType? type;
+        if (args["element"] != null) {
+          if (args["element"] == "null") {
+            type = null;
+          } else if (args["element"] == "branch") {
+            type = UIElementType.empty;
+          } else {
+            type = UIElementType.values.byName(args["element"]!);
+          }
         }
-      }
-      AddDirection? direction;
-      if (args["direction"] != null) {
-        direction = AddDirection.fromString(args["direction"]!);
-      }
-      addChildFromType(type, direction);
-      return null;
-    } else if (action == "setBackgroundColor" || action == "setBorder") {
-      if (decoration.value == null) {
-        decoration.value = ElementDecoration();
-      }
-      return decoration.value!.handleAction(action, args, root);
-    } else if (content.value != null) {
-      MyAction? response = content.value!.handleAction(action, args);
-      if (response != null) return response;
+        AddDirection? direction;
+        if (args["direction"] != null && args["direction"] != "null") {
+          direction = AddDirection.fromString(args["direction"]!);
+        }
+        addChildFromType(type, direction);
+        return null;
+      case "setDecoration":
+        if (decoration.value == null) {
+          decoration.value = ElementDecoration();
+        }
+        return decoration.value!.handleAction(action, args, root);
+      case "setPadding":
+      case "setSingleChildAlignment":
+      case "setMultiChildProps":
+        if (content.value != null) {
+          return content.value!.handleAction(action, args);
+        }
+        return null;
     }
     return super.handleAction(action, args);
   }
@@ -374,7 +391,7 @@ class ElementDecoration extends ChangeNotifier {
   void copy(ElementDecoration other) {
     backgroundColor.copy(other.backgroundColor);
     radius = other.radius.clone(notifyListeners);
-    border.value = other.border.value?.clone();
+    border.value = other.border.value?.clone(notifyListeners);
     //margin.value = other.margin.value;
   }
 
@@ -432,7 +449,7 @@ class ElementDecoration extends ChangeNotifier {
           border = OptionalProperty<MyBorder>(null, listener: notifyListeners);
         } else {
           border = OptionalProperty<MyBorder>(
-              MyBorder.fromJson(json["border"], root),
+              MyBorder.fromJson(json["border"], root, notifyListeners),
               listener: notifyListeners);
         }
       }
@@ -463,6 +480,7 @@ class ElementDecoration extends ChangeNotifier {
         border.value = MyBorder.fromJson(
           jsonDecode(value),
           root,
+          notifyListeners,
         );
         return UpdateAction<MyBorder?>(
           oldValue: old,
@@ -478,32 +496,53 @@ class ElementDecoration extends ChangeNotifier {
     Map<String, String> args,
     ElementRoot root,
   ) {
-    if (action == "setBackgroundColor") {
-      Variable<Color> old = backgroundColor.variable;
-      backgroundColor.variable = (VariableParser.parse<Color>(
-          args["color"]!, root,
-          notifyListeners: notifyListeners));
-      return UpdateAction<Variable<Color>>(
-        oldValue: old,
-        newValue: backgroundColor.variable,
-        set: (value) => backgroundColor.variable = value,
-      );
-    } else if (action == "setBorder") {
-      MyBorder? old = border.value;
-      border.value = MyBorder.fromAction(args, root, border.value);
-      return UpdateAction<MyBorder?>(
-        oldValue: old,
-        newValue: border.value,
-        set: (value) => border.value = value,
-      );
-    } else if (action == "setRadius") {
-      MyRadius? old = radius;
-      radius = MyRadius.fromAction(args, root, radius);
-      return UpdateAction<MyRadius>(
-        oldValue: old,
-        newValue: radius,
-        set: (value) => radius = value,
-      );
+    switch (action) {
+      case "setDecoration":
+        if (args["backgroundColor"] != null) {
+          Variable<Color> old = backgroundColor.variable;
+          backgroundColor.variable = VariableParser.parse<Color>(
+              args["backgroundColor"]!, root,
+              notifyListeners: notifyListeners);
+          return UpdateAction<Variable<Color>>(
+            oldValue: old,
+            newValue: backgroundColor.variable,
+            set: (value) => backgroundColor.variable = value,
+          );
+        }
+        if (args["border"] != null) {
+          final borderArgs =
+              jsonDecode(args["border"]!) as Map<String, dynamic>;
+          if (borderArgs["side"] != "null") {
+            MyBorder? old = border.value;
+            border.value = MyBorder.fromAction({
+              "side": borderArgs["side"] as String,
+              "width": borderArgs["width"] ?? "0.0",
+              "color": borderArgs["color"] ?? "#000000FF",
+            }, root, border.value, notifyListeners);
+            return UpdateAction<MyBorder?>(
+              oldValue: old,
+              newValue: border.value,
+              set: (value) => border.value = value,
+            );
+          }
+        }
+        if (args["radius"] != null) {
+          final radiusArgs =
+              jsonDecode(args["radius"]!) as Map<String, dynamic>;
+          if (radiusArgs["corner"] != "null") {
+            MyRadius old = radius;
+            radius = MyRadius.fromAction({
+              "side": radiusArgs["corner"] as String,
+              "radius": radiusArgs["value"] ?? "0.0",
+            }, root, radius);
+            return UpdateAction<MyRadius>(
+              oldValue: old,
+              newValue: radius,
+              set: (value) => radius = value,
+            );
+          }
+        }
+        return null;
     }
     return null;
   }

@@ -111,10 +111,11 @@ extension AlignmentExtension on Alignment {
 
 extension FontWeightExtension on FontWeight {
   static FontWeight fromString(String value) {
+    value = value.toLowerCase().replaceAll(' ', '').replaceAll('-', '');
     switch (value) {
       case 'thin':
         return FontWeight.w100;
-      case 'extraLight':
+      case 'extralight':
         return FontWeight.w200;
       case 'light':
         return FontWeight.w300;
@@ -123,16 +124,16 @@ extension FontWeightExtension on FontWeight {
         return FontWeight.w400;
       case 'medium':
         return FontWeight.w500;
-      case 'semiBold':
+      case 'semibold':
         return FontWeight.w600;
       case 'bold':
         return FontWeight.w700;
-      case 'extraBold':
+      case 'extrabold':
         return FontWeight.w800;
       case 'black':
         return FontWeight.w900;
     }
-    throw UnimplementedError('FontWeight for $value is not implemented');
+    return FontWeight.w500;
   }
 
   String toJson() {
@@ -172,6 +173,34 @@ extension ColorExtension on Color {
 
   int toHexInt() {
     return int.parse('0x${_radixFromDouble(a)}${toHex()}', radix: 16);
+  }
+
+  static Color fromHex(String input) {
+    String hex = input.replaceFirst('#', '');
+    if (hex.length == 1) {
+      hex = hex * 6; // Expand single digit hex to full form
+    } else if (hex.length == 2) {
+      hex = hex * 3; // Expand double digit hex to full form
+    } else if (hex.length == 3) {
+      hex =
+          hex.split('').map((char) => char * 2).join(); // Expand shorthand hex
+    } else if (hex.length == 4) {
+      hex = hex
+          .split('')
+          .map((char) => char * 2)
+          .join(); // Expand shorthand hex with alpha
+    }
+
+    if (hex.length == 6) {
+      hex = 'FF$hex'; // Add alpha value if not provided
+    } else if (hex.length == 8) {
+      // Convert from RRGGBBAA to AARRGGBB format
+      String alpha = hex.substring(6, 8);
+      String rgb = hex.substring(0, 6);
+      hex = alpha + rgb;
+    }
+
+    return Color(int.parse(hex, radix: 16));
   }
 }
 

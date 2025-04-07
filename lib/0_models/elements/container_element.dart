@@ -275,27 +275,41 @@ class ElementContainer extends ChangeNotifier {
 
   UpdateAction? handleAction(String action, Map<String, String> args) {
     try {
-      if (action == "setPadding") {
-        MyPadding old = padding;
-        padding = MyPadding.fromAction(args, element.root, old);
-        return UpdateAction<MyPadding>(
-          oldValue: old,
-          newValue: padding,
-          set: (v) => padding = v,
-        );
-      } else if (action == "setOverflow") {
-        ContentOverflow old = overflow;
-        overflow = ContentOverflow.fromString(args["overflow"]!);
-        return UpdateAction<ContentOverflow>(
-          oldValue: old,
-          newValue: overflow,
-          set: (v) => overflow = v,
-        );
-      } else {}
+      switch (action) {
+        case "setPadding":
+          MyPadding old = padding;
+          padding = MyPadding.fromAction(args, element.root, old);
+          return UpdateAction<MyPadding>(
+            oldValue: old,
+            newValue: padding,
+            set: (v) => padding = v,
+          );
+        case "setOverflow":
+          ContentOverflow old = overflow;
+          overflow = ContentOverflow.fromString(args["overflow"]!);
+          return UpdateAction<ContentOverflow>(
+            oldValue: old,
+            newValue: overflow,
+            set: (v) => overflow = v,
+          );
+        case "setSingleChildAlignment":
+          if (type is SingleChildElementType) {
+            return (type as SingleChildElementType)
+                .handleAction("setAlignment", args, element.root);
+          }
+          return null;
+        case "setMultiChildProps":
+          if (type is FlexElementType) {
+            return (type as FlexElementType)
+                .handleAction("setFlexProps", args, element.root);
+          }
+          return null;
+      }
     } catch (e) {
       debugPrint("Error in handleAction: $e");
       return null;
     }
+    return null;
   }
 
   String get label => type.label;
@@ -354,7 +368,8 @@ abstract class ElementContainerType extends ChangeNotifier {
 
   UpdateAction? setValue(String property, String value, ElementRoot root);
 
-  UpdateAction? handleAction(String action, Map<String, String> args);
+  UpdateAction? handleAction(
+      String action, Map<String, String> args, ElementRoot root);
 }
 
 @notifier
@@ -444,7 +459,7 @@ class SingleChildElementType extends ElementContainerType {
   }
 
   @override
-  UpdateAction? handleAction(String action, Map<String, String> args) {
+  UpdateAction? handleAction(String action, Map<String, String> args, _) {
     try {
       if (action == "setAlignment") {
         Alignment old = alignment;
@@ -511,25 +526,6 @@ class FlexElementType extends ElementContainerType {
       children: spacedChildren.isEmpty ? children : spacedChildren,
     );
 
-    /*if (scroll != null) {
-      try {
-        double initialOffset = PageDesignView.scrollStates[hashCode] ?? 0.0;
-        ScrollController controller =
-            ScrollController(initialScrollOffset: initialOffset);
-        controller.addListener(() {
-          PageDesignView.scrollStates[hashCode] = controller.offset;
-        });
-        current = SingleChildScrollView(
-          controller: controller,
-          scrollDirection: scroll!,
-          physics: const AlwaysScrollableScrollPhysics(),
-          restorationId: hashCode.toString(),
-          child: current,
-        );
-      } catch (e, s) {
-        debugPrint("Error in SingleChildScrollView: $e $s");
-      }
-    }*/
     return current;
   }
 
@@ -632,54 +628,51 @@ class FlexElementType extends ElementContainerType {
   }
 
   @override
-  UpdateAction? handleAction(String action, Map<String, String> args,
-      {ElementRoot? root}) {
-    try {
-      if (action == "setDirection") {
-        Axis old = direction;
-        direction =
-            args["direction"] == "vertical" ? Axis.vertical : Axis.horizontal;
-        return UpdateAction<Axis>(
+  UpdateAction? handleAction(
+      String action, Map<String, String> args, ElementRoot root) {
+    switch (action) {
+      case "setFlexProps":
+        Map<String, dynamic> old = {
+          "direction": direction,
+          "mainAxisAlignment": mainAxisAlignment,
+          "crossAxisAlignment": crossAxisAlignment,
+          "spacing": spacing,
+        };
+        if (args["direction"] != null) {
+          direction =
+              args["direction"] == "vertical" ? Axis.vertical : Axis.horizontal;
+        }
+        if (args["mainAxisAlignment"] != null) {
+          mainAxisAlignment = MainAxisAlignment.values.firstWhere(
+              (e) => e.toString() == args["mainAxisAlignment"],
+              orElse: () => MainAxisAlignment.start);
+        }
+        if (args["crossAxisAlignment"] != null) {
+          crossAxisAlignment = CrossAxisAlignment.values.firstWhere(
+              (e) => e.toString() == args["crossAxisAlignment"],
+              orElse: () => CrossAxisAlignment.start);
+        }
+        if (args["spacing"] != null) {
+          spacing = VariableParser.parse<double>(args["spacing"]!, root,
+              notifyListeners: notifyListeners);
+        }
+        return UpdateAction<Map<String, dynamic>>(
           oldValue: old,
-          newValue: direction,
-          set: (v) => direction = v,
+          newValue: {
+            "direction": direction,
+            "mainAxisAlignment": mainAxisAlignment,
+            "crossAxisAlignment": crossAxisAlignment,
+            "spacing": spacing,
+          },
+          set: (v) {
+            direction = v["direction"];
+            mainAxisAlignment = v["mainAxisAlignment"];
+            crossAxisAlignment = v["crossAxisAlignment"];
+            spacing = v["spacing"];
+          },
         );
-      } else if (action == "setMainAxisAlignment") {
-        MainAxisAlignment old = mainAxisAlignment;
-        mainAxisAlignment = MainAxisAlignment.values.firstWhere(
-            (e) => e.toString() == args["mainAxisAlignment"],
-            orElse: () => MainAxisAlignment.start);
-        return UpdateAction<MainAxisAlignment>(
-          oldValue: old,
-          newValue: mainAxisAlignment,
-          set: (v) => mainAxisAlignment = v,
-        );
-      } else if (action == "setCrossAxisAlignment") {
-        CrossAxisAlignment old = crossAxisAlignment;
-        crossAxisAlignment = CrossAxisAlignment.values.firstWhere(
-            (e) => e.toString() == args["crossAxisAlignment"],
-            orElse: () => CrossAxisAlignment.start);
-        return UpdateAction<CrossAxisAlignment>(
-          oldValue: old,
-          newValue: crossAxisAlignment,
-          set: (v) => crossAxisAlignment = v,
-        );
-      } else if (action == "setSpacing") {
-        Variable<double> old = spacing;
-        spacing = VariableParser.parse<double>(args["spacing"]!, root,
-            notifyListeners: notifyListeners);
-        return UpdateAction<Variable<double>>(
-          oldValue: old,
-          newValue: spacing,
-          set: (v) => spacing = v,
-        );
-      } else {
-        return null;
-      }
-    } catch (e) {
-      debugPrint("Error in handleAction: $e");
-      return null;
     }
+    return null;
   }
 }
 
@@ -749,7 +742,9 @@ class StackElementType extends ElementContainerType {
   }
 
   @override
-  UpdateAction? handleAction(String action, Map<String, String> args) => null;
+  UpdateAction? handleAction(
+          String action, Map<String, String> args, ElementRoot root) =>
+      null;
 }
 
 //WrapElement
@@ -891,7 +886,8 @@ class WrapElementType extends ElementContainerType {
   }
 
   @override
-  UpdateAction? handleAction(String action, Map<String, String> args) {
+  UpdateAction? handleAction(
+      String action, Map<String, String> args, ElementRoot root) {
     return null;
   }
 }
@@ -1046,7 +1042,8 @@ class ScrollableGridElementType extends ElementContainerType {
   }
 
   @override
-  UpdateAction? handleAction(String action, Map<String, String> args) {
+  UpdateAction? handleAction(
+      String action, Map<String, String> args, ElementRoot root) {
     return null;
   }
 }
@@ -1170,7 +1167,9 @@ class ScalingGridElementType extends ElementContainerType {
   }
 
   @override
-  UpdateAction? handleAction(String action, Map<String, String> args) => null;
+  UpdateAction? handleAction(
+          String action, Map<String, String> args, ElementRoot root) =>
+      null;
 
   @override
   String get label => "Scaling Grid";

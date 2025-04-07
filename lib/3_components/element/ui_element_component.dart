@@ -84,10 +84,12 @@ class _ElementWidgetState extends State<ElementWidget> {
       }
     }
 
-    if (container != null) {
+    if (container != null &&
+        container.overflow != ContentOverflow.allow &&
+        container.overflow != ContentOverflow.clip) {
       if (container.overflow == ContentOverflow.allow) {
         current = OverflowBox(
-          fit: OverflowBoxFit.deferToChild,
+          fit: OverflowBoxFit.max,
           alignment: container.type is SingleChildElementType
               ? (container.type as SingleChildElementType).alignment
               : Alignment.center,
